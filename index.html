@@ -39,7 +39,7 @@ button.p{background:var(--ac);color:#fff;width:100%;font-size:16px;margin-top:16
 </head>
 <body>
 <main>
-<div class="logo"><img id="logo" src="Prestige-transparent_vertical.jpg" alt="Prestige Properties - Sales, Rentals &amp; Concierge"></div>
+<div class="logo"><img id="logo" src="logo.png" alt="Prestige Properties - Sales, Rentals &amp; Concierge"></div>
 <h1>Registro de visitas</h1>
 <nav class="tabs"><button id="b1" class="on" onclick="tab(1)">Nueva visita</button><button id="b2" onclick="tab(2)">Visitas</button></nav>
 <section id="t1">
@@ -120,7 +120,7 @@ async function pdf(id){
   if(!window.jspdf){m.textContent='No se pudo cargar el generador de PDF.';return}
   try{
     const d=new window.jspdf.jsPDF({unit:'mm',format:'a4'});
-    try{const i=$('logo'),c=document.createElement('canvas');c.width=i.naturalWidth;c.height=i.naturalHeight;c.getContext('2d').drawImage(i,0,0);d.addImage(c.toDataURL('image/jpeg',0.9),'JPEG',80,10,50,50*i.naturalHeight/i.naturalWidth)}catch(e){}
+    try{const i=$('logo'),c=document.createElement('canvas');c.width=i.naturalWidth;c.height=i.naturalHeight;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(i,0,0);d.addImage(c.toDataURL('image/jpeg',0.9),'JPEG',80,10,50,50*i.naturalHeight/i.naturalWidth)}catch(e){}
     d.setFontSize(15);d.text(list.length===1?'Ficha de visita':'Registro de visitas',105,58,{align:'center'});
     d.setFontSize(9);d.text('Generado el '+fmt(new Date().toISOString().slice(0,10)),105,64,{align:'center'});
     let y=72;
