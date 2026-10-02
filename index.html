@@ -165,6 +165,18 @@ $('save').onclick=async()=>{
   }catch(e){}
 })();
 <script>
+(function(){
+  var orig = render;
+  render = function(){
+    try { localStorage.setItem('visits', JSON.stringify(visits)); } catch(e) {}
+    return orig.apply(this, arguments);
+  };
+  try {
+    var s = JSON.parse(localStorage.getItem('visits') || 'null');
+    if (Array.isArray(s)) visits = s;
+  } catch(e) {}
+  render();
+})();
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 </script>  
 </body>
