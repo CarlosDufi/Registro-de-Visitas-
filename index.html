@@ -57,6 +57,8 @@ button.p{background:var(--ac);color:#fff;width:100%;font-size:16px;margin-top:16
 </section>
 <div id="app" hidden>
 <div class="row userbar"><span class="mu" id="who"></span><button onclick="logout()">Salir</button></div>
+<p class="mu" id="net" hidden style="margin:0 0 8px">Sin conexión. Puedes registrar visitas: se enviarán solas cuando haya señal.</p>
+<div class="card" id="pend" hidden><b id="pendTxt"></b><p class="mu" style="margin:4px 0 0">Se enviarán automáticamente al volver la señal. No borres los datos del navegador hasta entonces.</p><div class="acts"><button onclick="flush()">Enviar ahora</button></div></div>
 <div class="card" id="legacy" hidden><b>Visitas guardadas en este dispositivo</b><p class="mu" id="legacyTxt"></p><div class="acts"><button onclick="uploadLegacy()">Subir a la nube y borrar del dispositivo</button><button onclick="dropLegacy()">Descartar</button></div></div>
 <nav class="tabs"><button id="b1" class="on" onclick="tab(1)">Nueva visita</button><button id="b2" onclick="tab(2)">Visitas</button></nav>
 <section id="t1">
@@ -93,7 +95,14 @@ button.p{background:var(--ac);color:#fff;width:100%;font-size:16px;margin-top:16
 <script>
 const $=id=>document.getElementById(id);
 if(typeof firebase==='undefined'){$('boot').textContent='No se pudo cargar el sistema de acceso (Firebase). Comprueba la conexión y recarga la página.';throw new Error('firebase no disponible')}
-let visits=[],db=null,me=null,isSup=false,unsub=null;
+let visits=[],srv=[],pend=[],db=null,me=null,isSup=false,unsub=null,flushing=false;
+const wt=(p,ms)=>Promise.race([p,new Promise((_,r)=>setTimeout(()=>r({code:'timeout'}),ms))]);
+function loadPend(){try{const a=JSON.parse(localStorage.getItem('pendientes')||'null');return Array.isArray(a)?a:[]}catch(e){return[]}}
+function savePend(){try{if(pend.length)localStorage.setItem('pendientes',JSON.stringify(pend));else localStorage.removeItem('pendientes')}catch(e){}}
+pend=loadPend();
+function merge(){const mine=me?pend.filter(p=>p.agentUid===me.uid):[];visits=[...srv,...mine.filter(p=>!srv.some(v=>v.id===p.id))]}
+function updPend(){const n=me?pend.filter(p=>p.agentUid===me.uid).length:0;$('pend').hidden=!n;if(n)$('pendTxt').textContent=n+' visita(s) pendiente(s) de enviar'}
+function net(){$('net').hidden=navigator.onLine}
 const LEGAL='DUFIBIZA SL es Responsable del tratamiento de conformidad con el GDPR y la LOPDGDD, con la finalidad de mantener una relación comercial y conservar los datos durante no más tiempo del necesario para ello. No se comunicarán los datos a terceros. Puede ejercer los derechos de acceso, rectificación, portabilidad, supresión, limitación y oposición en Avenida Bartolomé Roselló, Nº1, - 07800 Ibiza (Illes Balears). E-mail: sales@ibizaprestige.com y el de reclamación a www.aepd.es.';
 firebase.initializeApp({apiKey:"AIzaSyB8g6XsfZKAuJUq7CwuvlgbGIE6tPxsolo",authDomain:"hoja-de-visitas.firebaseapp.com",projectId:"hoja-de-visitas",storageBucket:"hoja-de-visitas.firebasestorage.app",messagingSenderId:"441072354523",appId:"1:441072354523:web:1cb7f7458dd759a7f4b8fe"});
 const auth=firebase.auth();db=firebase.firestore();
@@ -189,11 +198,11 @@ async function pdf(id){
     const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type:'application/pdf'}));a.download=name;a.click();
   }catch(e){m.textContent='Error al generar el PDF.'}
 }
-function render(){buildPer();buildAg();draw()}
+function render(){updPend();buildPer();buildAg();draw()}
 function draw(){
   const f=filtered(),ids=new Set(f.map(v=>v.id));[...sel].forEach(i=>{if(!ids.has(i))sel.delete(i)});
   if(!f.length){$('list').innerHTML='<span class="mu">'+(visits.length?'No hay visitas que coincidan con la búsqueda.':'Aún no hay visitas.')+'</span>';upd();return}
-  $('list').innerHTML=f.map(v=>`<div class="v"><div class="row"><label class="chk"><input type="checkbox" ${sel.has(v.id)?'checked':''} onchange="toggle('${v.id}',this.checked)"><b>Ref. ${esc(v.ref)}</b></label><span class="mu">${fmt(v.date)}</span></div>
+  $('list').innerHTML=f.map(v=>`<div class="v"><div class="row"><label class="chk"><input type="checkbox" ${sel.has(v.id)?'checked':''} onchange="toggle('${v.id}',this.checked)"><b>Ref. ${esc(v.ref)}</b>${pend.some(p=>p.id===v.id)?' <span style="color:#b26a00;font-size:12px">· pendiente de enviar</span>':''}</label><span class="mu">${fmt(v.date)}</span></div>
   <div style="margin-top:6px"><span class="mu">Propiedad:</span> <b>${esc(v.property)}</b></div>
   <div><span class="mu">Cliente:</span> <b>${esc(v.client)}</b></div>
   <div><span class="mu">Agente:</span> <b>${esc(v.agentEmail||'-')}</b></div>
@@ -204,6 +213,7 @@ function draw(){
 }
 async function del(id){
   if(!confirm('¿Eliminar esta visita?'))return;
+  if(pend.some(p=>p.id===id)){pend=pend.filter(p=>p.id!==id);savePend();merge();render();return}
   try{await db.collection('visits').doc(id).delete()}catch(e){$('msg2').textContent='No se pudo eliminar ('+(e.code||'error')+').'}
 }
 $('save').onclick=async()=>{
@@ -211,17 +221,34 @@ $('save').onclick=async()=>{
   const v={date:$('f').value,ref:$('r').value.trim(),property:$('p').value.trim(),client:$('c').value.trim(),rating,feedback:$('fb').value.trim()};
   if(!v.date||!v.ref||!v.property||!v.client)return msg('Completa todos los campos.');
   if(pads.sc.empty()||pads.sa.empty())return msg('Faltan las firmas del cliente y del agente.');
-  if(!navigator.onLine)return msg('Sin conexión. Conéctate a internet para guardar la visita.');
   v.clientSig=pads.sc.data();v.agentSig=pads.sa.data();v.id='v'+Date.now();v.created=Date.now();
   v.agentUid=me.uid;v.agentEmail=(me.email||'').toLowerCase();
   $('save').disabled=true;msg('Guardando…');
-  try{
-    await db.collection('visits').doc(v.id).set(v);
-    msg('Visita guardada.');
-    ['r','p','c','fb'].forEach(i=>$(i).value='');rating=0;drawStars();clr('sc');clr('sa');
-  }catch(e){msg('No se pudo guardar la visita ('+(e.code||'error')+'). Inténtalo de nuevo.')}
+  let queued=false;
+  if(!navigator.onLine)queued=true;
+  else{
+    try{await wt(db.collection('visits').doc(v.id).set(v),8000)}
+    catch(e){
+      if(e&&(e.code==='timeout'||e.code==='unavailable'))queued=true;
+      else{msg('No se pudo guardar la visita ('+((e&&e.code)||'error')+'). Inténtalo de nuevo.');$('save').disabled=false;return}
+    }
+  }
+  if(queued){pend.push(v);savePend();merge();render();msg('Sin conexión suficiente: la visita queda guardada en este dispositivo y se enviará sola cuando haya señal. No borres los datos del navegador.')}
+  else msg('Visita guardada.');
+  ['r','p','c','fb'].forEach(i=>$(i).value='');rating=0;drawStars();clr('sc');clr('sa');
   $('save').disabled=false;
 };
+async function flush(){
+  if(flushing||!me||!navigator.onLine)return;
+  flushing=true;
+  try{
+    for(const v of [...pend]){
+      if(v.agentUid!==me.uid)continue;
+      try{await wt(db.collection('visits').doc(v.id).set(v),15000)}catch(e){break}
+      pend=pend.filter(x=>x.id!==v.id);savePend();merge();render();
+    }
+  }finally{flushing=false}
+}
 function show(w){$('boot').hidden=true;$('auth').hidden=w!=='auth';$('app').hidden=w!=='app'}
 function authErr(e){
   const c=(e&&e.code)||'';
@@ -244,7 +271,11 @@ $('forgot').onclick=async()=>{
   try{await auth.sendPasswordResetEmail(em)}catch(e){}
   $('amsg').textContent='Si el correo está dado de alta, recibirás un enlace para cambiar la contraseña.';
 };
-function logout(){auth.signOut()}
+function logout(){
+  const n=me?pend.filter(p=>p.agentUid===me.uid).length:0;
+  if(n&&!confirm('Hay '+n+' visita(s) pendiente(s) de enviar. Se enviarán cuando vuelvas a entrar con este usuario. ¿Salir ahora?'))return;
+  auth.signOut();
+}
 function legacy(){try{const a=JSON.parse(localStorage.getItem('visits')||'null');return Array.isArray(a)?a:[]}catch(e){return[]}}
 function checkLegacy(){const n=legacy().length;$('legacy').hidden=!n;if(n)$('legacyTxt').textContent='Hay '+n+' visita(s) guardada(s) solo en este dispositivo. Al subirlas se asignarán a tu usuario.'}
 async function uploadLegacy(){
@@ -259,16 +290,27 @@ async function uploadLegacy(){
   }catch(e){$('msg2').textContent='No se pudieron subir ('+(e.code||'error')+').'}
 }
 function dropLegacy(){if(confirm('¿Borrar del dispositivo las visitas guardadas sin subirlas?')){localStorage.removeItem('visits');$('legacy').hidden=true}}
-auth.onAuthStateChanged(async u=>{
+async function start(){
+  if(!me)return;const u=me;
   if(unsub){unsub();unsub=null}
-  visits=[];sel.clear();me=u;isSup=false;
-  if(!u){$('q').value='';$('per').value='all';$('ag').value='all';show('auth');return}
-  try{const d=await db.collection('supervisores').doc((u.email||'').toLowerCase()).get();isSup=d.exists}catch(e){isSup=false}
-  $('who').textContent=u.email+(isSup?' · ve todas las visitas':'');
-  show('app');tab(1);checkLegacy();render();
+  let sup=isSup;
+  try{sup=(await wt(db.collection('supervisores').doc((u.email||'').toLowerCase()).get(),8000)).exists}catch(e){}
+  if(me!==u)return;
+  isSup=sup;$('who').textContent=u.email+(isSup?' · ve todas las visitas':'');
   const col=db.collection('visits'),qy=isSup?col:col.where('agentUid','==',u.uid);
-  unsub=qy.onSnapshot(s=>{visits=s.docs.map(d=>d.data());render()},e=>{$('msg2').textContent='No se pudieron cargar las visitas ('+(e.code||'error')+').'});
+  unsub=qy.onSnapshot(s=>{srv=s.docs.map(d=>d.data());merge();render()},e=>{$('msg2').textContent='No se pudieron cargar las visitas ('+(e.code||'error')+').'});
+  render();flush();
+}
+auth.onAuthStateChanged(u=>{
+  if(unsub){unsub();unsub=null}
+  srv=[];visits=[];sel.clear();me=u;isSup=false;
+  if(!u){$('q').value='';$('per').value='all';$('ag').value='all';show('auth');return}
+  $('who').textContent=u.email;
+  show('app');tab(1);checkLegacy();net();merge();render();start();
 });
+window.addEventListener('online',()=>{net();start()});
+window.addEventListener('offline',net);
+setInterval(flush,30000);
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 </script>
 </body>
