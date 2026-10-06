@@ -38,6 +38,7 @@ button.p{background:var(--ac);color:#fff;width:100%;font-size:16px;margin-top:16
 .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 .legal{font-size:12px;color:var(--mu);line-height:1.45;margin:14px 0 4px}.legal a{color:var(--ac)}.legal b{color:var(--tx)}
 .userbar{margin:0 0 10px}.userbar .mu{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:8px}
+.prop{border:1px solid var(--bd);border-radius:10px;padding:4px 12px 12px;margin:10px 0}.prop .row{margin-top:10px}.prop .rm{padding:4px 10px;font-size:12px}
 #msg{color:var(--ac);font-size:14px;min-height:18px;margin-top:8px}
 </style>
 </head>
@@ -64,10 +65,11 @@ button.p{background:var(--ac);color:#fff;width:100%;font-size:16px;margin-top:16
 <section id="t1">
 <div class="card">
   <label for="f">Fecha</label><input id="f" type="date">
-  <label for="r">Nº referencia</label><input id="r" placeholder="Ej. REF-1024">
-  <label for="p">Nombre de propiedad</label><input id="p">
+  <label>Propiedades visitadas</label>
+  <div id="props"></div>
+  <button type="button" onclick="addRow()">+ Añadir otra propiedad</button>
   <label for="c">Nombre cliente</label><input id="c">
-  <label>Feedback del cliente</label>
+  <label>Valoración y feedback de la visita</label>
   <div class="stars" id="stars" role="group" aria-label="Valoración"></div>
   <textarea id="fb" placeholder="Comentarios del cliente sobre la propiedad (opcional)" style="margin-top:8px"></textarea>
   <p class="legal">DUFIBIZA SL es Responsable del tratamiento de conformidad con el GDPR y la LOPDGDD, con la finalidad de mantener una relación comercial y conservar los datos durante no más tiempo del necesario para ello. No se comunicarán los datos a terceros. Puede ejercer los derechos de acceso, rectificación, portabilidad, supresión, limitación y oposición en Avenida Bartolomé Roselló, Nº1, - 07800 Ibiza (Illes Balears). E-mail: sales@ibizaprestige.com y el de reclamación a <a href="https://www.aepd.es" target="_blank" rel="noopener">www.aepd.es</a>.<br><b>Al firmar, confirmo que he sido informado/a del tratamiento de mis datos personales.</b></p>
@@ -119,6 +121,26 @@ function pad(id){
     data(){const t=document.createElement('canvas');t.width=300;t.height=100;t.getContext('2d').drawImage(c,0,0,300,100);return t.toDataURL('image/png')}};
 }
 pad('sc');pad('sa');
+function getProps(v){return Array.isArray(v.props)&&v.props.length?v.props:[{ref:v.ref,property:v.property}]}
+let rowSeq=0,rows=[];
+function renumber(){rows.forEach((n,i)=>{document.querySelector('#pr'+n+' .pn').textContent=i+1;document.querySelector('#pr'+n+' .rm').hidden=rows.length<2})}
+function addRow(){
+  const n=++rowSeq,b=document.createElement('div');b.className='prop';b.id='pr'+n;
+  b.innerHTML=`<div class="row"><b class="mu">Propiedad <span class="pn"></span></b><button type="button" class="rm" onclick="rmRow(${n})">Quitar</button></div>
+  <label for="r${n}">Nº referencia</label><input id="r${n}" placeholder="Ej. REF-1024">
+  <label for="p${n}">Nombre de propiedad</label><input id="p${n}">
+  <button type="button" id="ob${n}" onclick="togOwner(${n})" style="margin-top:10px">Añadir firma del propietario</button>
+  <div id="ow${n}" hidden><label for="on${n}">Nombre del propietario</label><input id="on${n}"><label>Firma propietario</label><canvas id="os${n}"></canvas><button type="button" onclick="pads.os${n}.clear()" style="margin-top:6px">Borrar firma</button></div>`;
+  $('props').appendChild(b);pad('os'+n);rows.push(n);renumber();
+}
+function rmRow(n){if(rows.length<2)return;$('pr'+n).remove();delete pads['os'+n];rows=rows.filter(x=>x!==n);renumber()}
+function togOwner(n){
+  const w=$('ow'+n),open=w.hidden;w.hidden=!open;
+  $('ob'+n).textContent=open?'Quitar firma del propietario':'Añadir firma del propietario';
+  if(open)pads['os'+n].init();else{pads['os'+n].clear();$('on'+n).value=''}
+}
+function resetRows(){$('props').innerHTML='';Object.keys(pads).filter(k=>k.startsWith('os')).forEach(k=>delete pads[k]);rows=[];addRow()}
+addRow();
 let rating=0;
 function drawStars(){$('stars').innerHTML=[1,2,3,4,5].map(n=>`<button type="button" class="${n<=rating?'on':''}" onclick="rating=rating===${n}?0:${n};drawStars()" aria-label="${n} de 5">★</button>`).join('')}
 drawStars();
@@ -126,7 +148,7 @@ function stars(n){return n?'★'.repeat(n)+'☆'.repeat(5-n):''}
 function clr(id){pads[id].clear()}
 function msg(t){$('msg').textContent=t}
 function esc(s){return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
-function tab(n){$('t1').hidden=n!==1;$('t2').hidden=n!==2;$('b1').classList.toggle('on',n===1);$('b2').classList.toggle('on',n===2);if(n===1){pads.sc.init();pads.sa.init()}}
+function tab(n){$('t1').hidden=n!==1;$('t2').hidden=n!==2;$('b1').classList.toggle('on',n===1);$('b2').classList.toggle('on',n===2);if(n===1)Object.values(pads).forEach(p=>p.init())}
 const fmt=d=>d.split('-').reverse().join('/');
 const sorted=()=>[...visits].sort((a,b)=>b.date.localeCompare(a.date)||b.created-a.created);
 const norm=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
@@ -151,7 +173,7 @@ const isFiltered=()=>$('q').value.trim()!==''||$('per').value!=='all'||($('ag').
 function filtered(){
   const q=norm($('q').value.trim()),p=$('per').value,a=$('ag').value||'all';
   return sorted().filter(v=>{
-    if(q&&!(norm(v.ref).includes(q)||norm(v.property).includes(q)))return false;
+    if(q&&!norm(getProps(v).map(p=>p.ref+' '+p.property).join(' ')).includes(q))return false;
     if(a!=='all'&&v.agentEmail!==a)return false;
     if(p==='all')return true;
     return p.includes('Q')?qOf(v.date)===p:v.date.slice(0,7)===p;
@@ -164,19 +186,7 @@ function upd(){
   const n=sel.size,f=filtered();
   $('pdfbtn').textContent=n?`Descargar seleccionadas (${n})`:(isFiltered()?`Descargar resultados (${f.length})`:'Descargar todas (PDF)');
   $('selall').checked=f.length>0&&f.every(v=>sel.has(v.id));
-  $('cnt').textContent=isFiltered()?`${f.length} de ${visits.length} visitas`:`${visits.length} visitas`;
-}
-function block(d,v,y){
-  d.setDrawColor(190);d.rect(15,y,180,76);
-  d.setFontSize(12);d.setFont(undefined,'bold');d.text(d.splitTextToSize('Propiedad: '+v.property,170)[0],20,y+8);
-  d.setFont(undefined,'normal');d.setFontSize(10);
-  d.text('Fecha: '+fmt(v.date),20,y+15);d.text('Nº ref.: '+v.ref,80,y+15);
-  d.text('Cliente: '+v.client,20,y+21);
-  d.text('Agente: '+(v.agentEmail||'-'),20,y+27);
-  if(v.rating)d.text('Valoración: '+v.rating+'/5',130,y+27);
-  if(v.feedback)d.text(d.splitTextToSize('Feedback: '+v.feedback,170).slice(0,2),20,y+33);
-  d.setFontSize(9);d.text('Firma cliente',20,y+46);d.text('Firma agente',110,y+46);
-  try{d.addImage(v.clientSig,'PNG',20,y+49,70,23.3);d.addImage(v.agentSig,'PNG',110,y+49,70,23.3)}catch(e){}
+  $('cnt').textContent=isFiltered()?`${f.length} de ${visits.length} hojas`:`${visits.length} hojas`;
 }
 async function pdf(id){
   const m=$('msg2');m.textContent='';
@@ -189,12 +199,34 @@ async function pdf(id){
     d.setFontSize(15);d.text(list.length===1?'Ficha de visita':'Registro de visitas',105,58,{align:'center'});
     d.setFontSize(9);d.text('Generado el '+fmt(new Date().toISOString().slice(0,10)),105,64,{align:'center'});
     let y=72;
-    list.forEach(v=>{if(y+76>281){d.addPage();y=20}block(d,v,y);y+=82});
+    const need=h=>{if(y+h>279){d.addPage();y=20}};
+    const para=(t,x,w,sz,bold)=>{d.setFontSize(sz);d.setFont(undefined,bold?'bold':'normal');const ls=d.splitTextToSize(String(t),w);need(ls.length*4.6+1);d.text(ls,x,y);y+=ls.length*4.6+1};
+    list.forEach(v=>{
+      const ps=getProps(v);
+      need(40);
+      para('Fecha: '+fmt(v.date)+'      Agente: '+(v.agentEmail||'-'),15,180,10,false);
+      para('Cliente: '+v.client,15,180,10,true);
+      ps.forEach((p,k)=>{
+        para('Propiedad'+(ps.length>1?' '+(k+1):'')+': '+p.property+'  (Ref. '+p.ref+')',15,180,10,false);
+        if(p.ownerSig){
+          need(27);para('Propietario: '+(p.ownerName||''),20,170,9,false);
+          d.setFontSize(8);d.text('Firma propietario',20,y);y+=1;
+          try{d.addImage(p.ownerSig,'PNG',20,y,50,16.7)}catch(e){}
+          y+=19;
+        }
+      });
+      if(v.rating)para('Valoración: '+v.rating+'/5',15,180,10,false);
+      if(v.feedback)para('Feedback: '+v.feedback,15,180,10,false);
+      need(36);
+      d.setFontSize(9);d.setFont(undefined,'normal');d.text('Firma cliente',15,y);d.text('Firma agente',110,y);y+=1.5;
+      try{d.addImage(v.clientSig,'PNG',15,y,60,20);d.addImage(v.agentSig,'PNG',110,y,60,20)}catch(e){}
+      y+=23;d.setDrawColor(190);d.line(15,y,195,y);y+=7;
+    });
     const np=d.getNumberOfPages();d.setFontSize(6);d.setTextColor(110);
     for(let k=1;k<=np;k++){d.setPage(k);d.text(d.splitTextToSize(LEGAL,180),15,285)}
     d.setTextColor(0);
     const data=d.output('arraybuffer');
-    const name=list.length===1?'visita-'+String(list[0].ref).replace(/[^\w-]+/g,'_')+'.pdf':'visitas.pdf';
+    const name=list.length===1?'visita-'+String(getProps(list[0])[0].ref).replace(/[^\w-]+/g,'_')+'.pdf':'visitas.pdf';
     const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type:'application/pdf'}));a.download=name;a.click();
   }catch(e){m.textContent='Error al generar el PDF.'}
 }
@@ -202,13 +234,16 @@ function render(){updPend();buildPer();buildAg();draw()}
 function draw(){
   const f=filtered(),ids=new Set(f.map(v=>v.id));[...sel].forEach(i=>{if(!ids.has(i))sel.delete(i)});
   if(!f.length){$('list').innerHTML='<span class="mu">'+(visits.length?'No hay visitas que coincidan con la búsqueda.':'Aún no hay visitas.')+'</span>';upd();return}
-  $('list').innerHTML=f.map(v=>`<div class="v"><div class="row"><label class="chk"><input type="checkbox" ${sel.has(v.id)?'checked':''} onchange="toggle('${v.id}',this.checked)"><b>Ref. ${esc(v.ref)}</b>${pend.some(p=>p.id===v.id)?' <span style="color:#b26a00;font-size:12px">· pendiente de enviar</span>':''}</label><span class="mu">${fmt(v.date)}</span></div>
-  <div style="margin-top:6px"><span class="mu">Propiedad:</span> <b>${esc(v.property)}</b></div>
-  <div><span class="mu">Cliente:</span> <b>${esc(v.client)}</b></div>
+  $('list').innerHTML=f.map(v=>{
+    const ps=getProps(v),multi=ps.length>1;
+    const plist=ps.map((p,k)=>`<div style="margin-top:${k?6:6}px"><span class="mu">Propiedad${multi?' '+(k+1):''}:</span> <b>${esc(p.property)}</b>${multi?` <span class="mu">(Ref. ${esc(p.ref)})</span>`:''}${p.ownerSig?`<div class="mu">Propietario: <b>${esc(p.ownerName||'')}</b></div><div class="sigs"><figure><img src="${p.ownerSig}" alt="Firma propietario"><figcaption>Firma propietario</figcaption></figure></div>`:''}</div>`).join('');
+    return `<div class="v"><div class="row"><label class="chk"><input type="checkbox" ${sel.has(v.id)?'checked':''} onchange="toggle('${v.id}',this.checked)"><b>Ref. ${ps.map(p=>esc(p.ref)).join(' · ')}</b>${pend.some(p=>p.id===v.id)?' <span style="color:#b26a00;font-size:12px">· pendiente de enviar</span>':''}</label><span class="mu">${fmt(v.date)}</span></div>
+  ${plist}
+  <div style="margin-top:6px"><span class="mu">Cliente:</span> <b>${esc(v.client)}</b></div>
   <div><span class="mu">Agente:</span> <b>${esc(v.agentEmail||'-')}</b></div>
   ${v.rating||v.feedback?`<div style="margin-top:6px"><span style="color:#e8a317">${stars(v.rating)}</span> ${esc(v.feedback||'')}</div>`:''}
   <div class="sigs"><figure><img src="${v.clientSig}" alt="Firma cliente"><figcaption>Firma cliente</figcaption></figure><figure><img src="${v.agentSig}" alt="Firma agente"><figcaption>Firma agente</figcaption></figure></div>
-  <div class="acts"><button onclick="pdf('${v.id}')">Descargar PDF</button>${me&&v.agentUid===me.uid?`<button onclick="del('${v.id}')">Eliminar</button>`:''}</div></div>`).join('');
+  <div class="acts"><button onclick="pdf('${v.id}')">Descargar PDF</button>${me&&v.agentUid===me.uid?`<button onclick="del('${v.id}')">Eliminar</button>`:''}</div></div>`}).join('');
   upd();
 }
 async function del(id){
@@ -218,8 +253,22 @@ async function del(id){
 }
 $('save').onclick=async()=>{
   if(!me)return;
-  const v={date:$('f').value,ref:$('r').value.trim(),property:$('p').value.trim(),client:$('c').value.trim(),rating,feedback:$('fb').value.trim()};
-  if(!v.date||!v.ref||!v.property||!v.client)return msg('Completa todos los campos.');
+  const props=[];
+  for(const n of rows){
+    const ref=$('r'+n).value.trim(),property=$('p'+n).value.trim(),idx=rows.indexOf(n)+1;
+    if(!ref||!property)return msg('Completa la referencia y el nombre de cada propiedad.');
+    const p={ref,property};
+    if(!$('ow'+n).hidden){
+      const on=$('on'+n).value.trim(),has=!pads['os'+n].empty();
+      if(on||has){
+        if(!on||!has)return msg('Propiedad '+idx+': completa el nombre y la firma del propietario, o quita su firma.');
+        p.ownerName=on;p.ownerSig=pads['os'+n].data();
+      }
+    }
+    props.push(p);
+  }
+  const v={date:$('f').value,client:$('c').value.trim(),props,ref:props[0].ref,property:props[0].property,rating,feedback:$('fb').value.trim()};
+  if(!v.date||!v.client)return msg('Completa la fecha y el nombre del cliente.');
   if(pads.sc.empty()||pads.sa.empty())return msg('Faltan las firmas del cliente y del agente.');
   v.clientSig=pads.sc.data();v.agentSig=pads.sa.data();v.id='v'+Date.now();v.created=Date.now();
   v.agentUid=me.uid;v.agentEmail=(me.email||'').toLowerCase();
@@ -235,7 +284,7 @@ $('save').onclick=async()=>{
   }
   if(queued){pend.push(v);savePend();merge();render();msg('Sin conexión suficiente: la visita queda guardada en este dispositivo y se enviará sola cuando haya señal. No borres los datos del navegador.')}
   else msg('Visita guardada.');
-  ['r','p','c','fb'].forEach(i=>$(i).value='');rating=0;drawStars();clr('sc');clr('sa');
+  resetRows();$('c').value='';$('fb').value='';rating=0;drawStars();clr('sc');clr('sa');
   $('save').disabled=false;
 };
 async function flush(){
