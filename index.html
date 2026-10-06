@@ -8,9 +8,9 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="theme-color" content="#1b8f97">
 <style>
-:root{--bg:#f6f5f2;--card:#fff;--tx:#1d1d1b;--mu:#6b6b66;--ac:#1b8f97;--bd:#d9d7d0;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#161616;--card:#222;--tx:#eee;--mu:#9a9a94;--ac:#6fb3c8;--bd:#3a3a38}}
-:root[data-theme="dark"]{--bg:#161616;--card:#222;--tx:#eee;--mu:#9a9a94;--ac:#6fb3c8;--bd:#3a3a38}
+:root{--bg:#f6f5f2;--card:#fff;--tx:#1d1d1b;--mu:#6b6b66;--ac:#1b8f97;--bd:#d9d7d0;--onac:#fff;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#161616;--card:#222;--tx:#eee;--mu:#9a9a94;--ac:#6fb3c8;--bd:#3a3a38;--onac:#0b2a33}}
+:root[data-theme="dark"]{--bg:#161616;--card:#222;--tx:#eee;--mu:#9a9a94;--ac:#6fb3c8;--bd:#3a3a38;--onac:#0b2a33}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.4 system-ui,-apple-system,Segoe UI,sans-serif}
@@ -20,9 +20,12 @@ h1{font-size:22px;margin:16px 0 16px;text-align:center}h2{font-size:17px;margin:
 .card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:16px;margin-bottom:12px}
 label{display:block;font-size:13px;color:var(--mu);margin:12px 0 4px}
 input,select{width:100%;padding:10px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font-size:16px}
+input[type=date]{-webkit-appearance:none;appearance:none;display:block;width:100%;min-width:0;max-width:100%;min-height:46px;text-align:left}
+input[type=date]::-webkit-date-and-time-value{text-align:left;min-height:1.2em;margin:0}
+input[type=date]::-webkit-datetime-edit{padding:0}
 textarea{width:100%;min-height:80px;padding:10px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font:16px system-ui,sans-serif;resize:vertical}
 .stars{display:flex;gap:4px}.stars button{border:0;background:none;font-size:30px;line-height:1;padding:2px;color:var(--bd)}.stars button.on{color:#e8a317}
-.tabs{display:flex;gap:6px;margin:0 0 12px}.tabs button{flex:1;padding:12px;border-radius:10px;font-size:15px}.tabs button.on{background:var(--ac);color:#fff}
+.tabs{display:flex;gap:6px;margin:0 0 12px}.tabs button{flex:1;padding:12px;border-radius:10px;font-size:15px}.tabs button.on{background:var(--ac);color:var(--onac)}
 table{width:100%;border-collapse:collapse;font-size:14px}th{text-align:left;color:var(--mu);font-weight:600;font-size:12px;border-bottom:1px solid var(--bd);padding:6px 4px}td{padding:9px 4px;border-bottom:1px solid var(--bd)}tr:last-child td{border-bottom:0}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px;z-index:9}
 .chk{display:flex;align-items:center;gap:10px;margin:0;font-size:16px;color:var(--tx);cursor:pointer}.chk input{width:22px;height:22px;padding:0;flex:none}
@@ -30,14 +33,14 @@ table{width:100%;border-collapse:collapse;font-size:14px}th{text-align:left;colo
 [hidden]{display:none!important}
 canvas{width:100%;height:130px;border:1px dashed var(--bd);border-radius:8px;background:#fff;touch-action:none;display:block}
 button{padding:10px 14px;border-radius:8px;border:1px solid var(--ac);background:transparent;color:var(--ac);font-size:14px;cursor:pointer}
-button.p{background:var(--ac);color:#fff;width:100%;font-size:16px;margin-top:16px}
+button.p{background:var(--ac);color:var(--onac);width:100%;font-size:16px;margin-top:16px}
 .row{display:flex;justify-content:space-between;align-items:center}
 .v{border-top:1px solid var(--bd);padding:12px 0}.v:first-child{border-top:0}
 .v img{height:36px;background:#fff;border-radius:4px;border:1px solid var(--bd);margin-right:6px}
 .mu{color:var(--mu);font-size:13px}
 .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 .legal{font-size:12px;color:var(--mu);line-height:1.45;margin:14px 0 4px}.legal a{color:var(--ac)}.legal b{color:var(--tx)}
-.userbar{margin:0 0 10px}.userbar .mu{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:8px}
+.userbar{margin:0 0 10px}.userbar .mu{margin-right:8px;overflow-wrap:anywhere}
 .prop{border:1px solid var(--bd);border-radius:10px;padding:4px 12px 12px;margin:10px 0}.prop .row{margin-top:10px}.prop .rm{padding:4px 10px;font-size:12px}
 #msg{color:var(--ac);font-size:14px;min-height:18px;margin-top:8px}
 </style>
