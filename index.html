@@ -127,7 +127,7 @@ function renumber(){rows.forEach((n,i)=>{document.querySelector('#pr'+n+' .pn').
 function addRow(){
   const n=++rowSeq,b=document.createElement('div');b.className='prop';b.id='pr'+n;
   b.innerHTML=`<div class="row"><b class="mu">Propiedad <span class="pn"></span></b><button type="button" class="rm" onclick="rmRow(${n})">Quitar</button></div>
-  <label for="r${n}">Nº referencia</label><input id="r${n}" placeholder="Ej. REF-1024">
+  <label for="r${n}">Nº referencia</label><input id="r${n}">
   <label for="p${n}">Nombre de propiedad</label><input id="p${n}">
   <button type="button" id="ob${n}" onclick="togOwner(${n})" style="margin-top:10px">Añadir firma del propietario</button>
   <div id="ow${n}" hidden><label for="on${n}">Nombre del propietario</label><input id="on${n}"><label>Firma propietario</label><canvas id="os${n}"></canvas><button type="button" onclick="pads.os${n}.clear()" style="margin-top:6px">Borrar firma</button></div>`;
