@@ -122,7 +122,8 @@ function pad(id){
     data(){const t=document.createElement('canvas');t.width=300;t.height=100;t.getContext('2d').drawImage(c,0,0,300,100);return t.toDataURL('image/png')}};
 }
 pad('sc');pad('sa');
-const FR1='El cliente, al firmar este documento, confirma que ha realizado la visita a la propiedad indicada arriba.',FRN='El cliente, al firmar este documento, confirma que ha realizado las visitas a las propiedades indicadas arriba.';
+const FR1='El cliente, al firmar este documento, confirma que ha realizado la visita a la propiedad indicada arriba.',FRN='El cliente, al firmar este documento, confirma que ha realizado las visitas a todas las propiedades indicadas arriba.';
+function nombre(e){const l=String(e||'').split('@')[0],f=l.split(/[._\-+0-9]+/).filter(Boolean)[0]||l;return f?f.charAt(0).toUpperCase()+f.slice(1).toLowerCase():'-'}
 function getProps(v){return Array.isArray(v.props)&&v.props.length?v.props:[{ref:v.ref,property:v.property}]}
 let rowSeq=0,rows=[];
 function renumber(){rows.forEach((n,i)=>{document.querySelector('#pr'+n+' .pn').textContent=i+1;document.querySelector('#pr'+n+' .rm').hidden=rows.length<2});$('multiNote').innerHTML='<b>'+(rows.length>1?FRN:FR1)+'</b>'}
@@ -168,7 +169,7 @@ function buildPer(){
 function buildAg(){
   const el=$('ag');el.hidden=!isSup;if(!isSup)return;
   const cur=el.value||'all',as=[...new Set(visits.map(v=>v.agentEmail).filter(Boolean))].sort();
-  el.innerHTML='<option value="all">Todos los agentes</option>'+as.map(a=>`<option value="${esc(a)}">${esc(a)}</option>`).join('');
+  el.innerHTML='<option value="all">Todos los agentes</option>'+as.map(a=>`<option value="${esc(a)}">${esc(as.filter(x=>nombre(x)===nombre(a)).length>1?nombre(a)+' ('+a+')':nombre(a))}</option>`).join('');
   el.value=as.includes(cur)?cur:'all';
 }
 const isFiltered=()=>$('q').value.trim()!==''||$('per').value!=='all'||($('ag').value||'all')!=='all';
@@ -200,33 +201,64 @@ async function pdf(id){
     try{const i=$('logo');if(!i.naturalWidth)throw 0;const c=document.createElement('canvas');c.width=i.naturalWidth;c.height=i.naturalHeight;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(i,0,0);d.addImage(c.toDataURL('image/jpeg',0.9),'JPEG',80,10,50,50*i.naturalHeight/i.naturalWidth)}catch(e){d.setFontSize(18);d.text('PRESTIGE PROPERTIES',105,30,{align:'center'});d.setFontSize(9);d.text('SALES, RENTALS & CONCIERGE',105,37,{align:'center'})}
     d.setFontSize(15);d.text(list.length===1?'Ficha de visita':'Registro de visitas',105,58,{align:'center'});
     d.setFontSize(9);d.text('Generado el '+fmt(new Date().toISOString().slice(0,10)),105,64,{align:'center'});
-    let y=72;
+    d.setDrawColor(205);d.setLineWidth(0.2);d.line(15,68,195,68);
+    let y=74;
     const need=h=>{if(y+h>279){d.addPage();y=20}};
     const para=(t,x,w,sz,bold)=>{d.setFontSize(sz);d.setFont(undefined,bold?'bold':'normal');const ls=d.splitTextToSize(String(t),w);need(ls.length*4.6+1);d.text(ls,x,y);y+=ls.length*4.6+1};
-    list.forEach(v=>{
-      const ps=getProps(v);
-      need(40);
-      para('Fecha: '+fmt(v.date)+'      Agente: '+(v.agentEmail||'-'),15,180,10,false);
-      para('Cliente: '+v.client,15,180,10,true);
+    const rule=c=>{d.setDrawColor(c||205);d.setLineWidth(0.2);d.line(15,y,195,y)};
+    const label=(t,x)=>{d.setFontSize(7.5);d.setFont(undefined,'bold');d.setTextColor(120);d.text(t,x,y);d.setTextColor(0)};
+    const hSheet=v=>{
+      const ps=getProps(v);let h=26;
+      d.setFontSize(10);d.setFont(undefined,'bold');
+      ps.forEach((p,k)=>{h+=d.splitTextToSize((k+1)+'.  '+p.property,150).length*4.6+2+(p.ownerSig?27:0)+(k<ps.length-1?9:3)});
+      h+=7;
+      if(v.rating||v.feedback){h+=6+(v.rating?6:0);if(v.feedback){d.setFont(undefined,'normal');h+=d.splitTextToSize(v.feedback,180).length*4.6+1}h+=9}
+      d.setFontSize(9);d.setFont(undefined,'bold');h+=d.splitTextToSize(ps.length>1?FRN:FR1,180).length*4.6+46;
+      return h;
+    };
+    list.forEach((v,vi)=>{
+      const ps=getProps(v),multi=ps.length>1;
+      if(list.length>1){const hh=hSheet(v);if(y+hh>279&&hh<=259&&y>20){d.addPage();y=20}}
+      need(50);
+      label('FECHA',15);label('CLIENTE',52);label('AGENTE',135);y+=4.8;
+      d.setFontSize(10);d.setFont(undefined,'normal');
+      const cl=d.splitTextToSize(String(v.client),78).slice(0,2),ag=d.splitTextToSize(nombre(v.agentEmail),58).slice(0,2);
+      d.text(fmt(v.date),15,y);d.text(cl,52,y);d.text(ag,135,y);
+      y+=Math.max(cl.length,ag.length)*4.6+2;rule();y+=7;
+      label('PROPIEDADES VISITADAS',15);y+=6;
       ps.forEach((p,k)=>{
-        para('Propiedad'+(ps.length>1?' '+(k+1):'')+': '+p.property+'  (Ref. '+p.ref+')',15,180,10,false);
+        d.setFontSize(10);d.setFont(undefined,'bold');
+        const nm=d.splitTextToSize((k+1)+'.  '+p.property,150);
+        need(nm.length*4.6+(p.ownerSig?34:8));
+        d.text(nm,15,y);d.setFont(undefined,'normal');d.text('Ref. '+p.ref,195,y,{align:'right'});y+=nm.length*4.6+2;
         if(p.ownerSig){
-          need(27);para('Propietario: '+(p.ownerName||''),20,170,9,false);
-          d.setFontSize(8);d.text('Firma propietario',20,y);y+=1;
+          d.setFontSize(9);d.text('Propietario: '+(p.ownerName||''),20,y);y+=5;
+          d.setFontSize(7.5);d.setTextColor(120);d.text('Firma propietario',20,y);d.setTextColor(0);y+=1.5;
           try{d.addImage(p.ownerSig,'PNG',20,y,50,16.7)}catch(e){}
-          y+=19;
+          y+=17.5;d.setDrawColor(150);d.setLineWidth(0.2);d.line(20,y,75,y);y+=3;
         }
+        if(k<ps.length-1){y+=3;rule(230);y+=6}else y+=3;
       });
-      if(v.rating)para('Valoración: '+v.rating+'/5',15,180,10,false);
-      if(v.feedback)para('Feedback: '+v.feedback,15,180,10,false);
-      para(ps.length>1?FRN:FR1,15,180,9,true);
-      need(36);
-      d.setFontSize(9);d.setFont(undefined,'normal');d.text('Firma cliente',15,y);d.text('Firma agente',110,y);y+=1.5;
+      rule();y+=7;
+      if(v.rating||v.feedback){
+        need(20);label('VALORACIÓN Y FEEDBACK',15);y+=6;
+        if(v.rating){d.setFontSize(10);d.setFont(undefined,'normal');d.text('Valoración: '+v.rating+'/5',15,y);y+=6}
+        if(v.feedback)para(v.feedback,15,180,10,false);
+        y+=2;rule();y+=7;
+      }
+      d.setFontSize(9);d.setFont(undefined,'bold');
+      const pl=d.splitTextToSize(multi?FRN:FR1,180),H=pl.length*4.6+46;
+      if(list.length===1){if(y+H>279){d.addPage();y=20}y=Math.max(y,279-H)}else need(H);
+      rule(120);y+=7;
+      d.setFontSize(9);d.setFont(undefined,'bold');d.text(pl,15,y);y+=pl.length*4.6+4;
+      label('FIRMA CLIENTE',15);label('FIRMA AGENTE',110);y+=2;
       try{d.addImage(v.clientSig,'PNG',15,y,60,20);d.addImage(v.agentSig,'PNG',110,y,60,20)}catch(e){}
-      y+=23;d.setDrawColor(190);d.line(15,y,195,y);y+=7;
+      y+=21;d.setDrawColor(150);d.setLineWidth(0.2);d.line(15,y,90,y);d.line(110,y,185,y);y+=4.5;
+      d.setFontSize(8);d.setFont(undefined,'normal');d.text(String(v.client),15,y);d.text(nombre(v.agentEmail),110,y);y+=7;
+      if(vi<list.length-1){y+=3;d.setDrawColor(120);d.setLineWidth(0.6);d.line(15,y,195,y);d.setLineWidth(0.2);y+=10}
     });
     const np=d.getNumberOfPages();d.setFontSize(6);d.setTextColor(110);
-    for(let k=1;k<=np;k++){d.setPage(k);d.text(d.splitTextToSize(LEGAL,180),15,285)}
+    for(let k=1;k<=np;k++){d.setPage(k);d.setDrawColor(205);d.setLineWidth(0.2);d.line(15,282.5,195,282.5);d.text(d.splitTextToSize(LEGAL,180),15,286)}
     d.setTextColor(0);
     const data=d.output('arraybuffer');
     const name=list.length===1?'visita-'+String(getProps(list[0])[0].ref).replace(/[^\w-]+/g,'_')+'.pdf':'visitas.pdf';
@@ -243,7 +275,7 @@ function draw(){
     return `<div class="v"><div class="row"><label class="chk"><input type="checkbox" ${sel.has(v.id)?'checked':''} onchange="toggle('${v.id}',this.checked)"><b>Ref. ${ps.map(p=>esc(p.ref)).join(' · ')}</b>${pend.some(p=>p.id===v.id)?' <span style="color:#b26a00;font-size:12px">· pendiente de enviar</span>':''}</label><span class="mu">${fmt(v.date)}</span></div>
   ${plist}
   <div style="margin-top:6px"><span class="mu">Cliente:</span> <b>${esc(v.client)}</b></div>
-  <div><span class="mu">Agente:</span> <b>${esc(v.agentEmail||'-')}</b></div>
+  <div><span class="mu">Agente:</span> <b>${esc(nombre(v.agentEmail))}</b></div>
   ${v.rating||v.feedback?`<div style="margin-top:6px"><span style="color:#e8a317">${stars(v.rating)}</span> ${esc(v.feedback||'')}</div>`:''}
   <div class="sigs"><figure><img src="${v.clientSig}" alt="Firma cliente"><figcaption>Firma cliente</figcaption></figure><figure><img src="${v.agentSig}" alt="Firma agente"><figcaption>Firma agente</figcaption></figure></div>
   <div class="acts"><button onclick="pdf('${v.id}')">Descargar PDF</button>${me&&v.agentUid===me.uid?`<button onclick="del('${v.id}')">Eliminar</button>`:''}</div></div>`}).join('');
