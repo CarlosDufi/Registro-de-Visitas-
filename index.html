@@ -86,6 +86,8 @@ button.p{background:var(--ac);color:var(--onac);width:100%;font-size:16px;margin
   <button type="button" onclick="clr('sc')" style="margin-top:6px" data-i="clearSig"></button>
   <label data-i="agentSig"></label><canvas id="sa"></canvas>
   <button type="button" onclick="clr('sa')" style="margin-top:6px" data-i="clearSig"></button>
+  <div><button type="button" id="cvb" onclick="togCollab()" style="margin-top:12px"></button></div>
+  <div id="cvw" hidden><label for="cvn" data-i="collabName"></label><input id="cvn" autocomplete="off"><label data-i="collabSig"></label><canvas id="cvs"></canvas><button type="button" onclick="clr('cvs')" style="margin-top:6px" data-i="clearSig"></button></div>
   <button class="p" id="save" data-i="save"></button>
   <div id="msg"></div>
 </div>
@@ -125,7 +127,7 @@ es:{
  frN:'El cliente, al firmar este documento, confirma que ha realizado las visitas a todas las propiedades indicadas arriba.',
  save:'Guardar visita',saving:'Guardando…',saved:'Visita guardada.',
  needDate:'Indica la fecha.',needProp:(i,multi)=>multi?'Propiedad '+i+': indica la referencia o el nombre de la propiedad.':'Indica la referencia o el nombre de la propiedad.',
- ownerInc:i=>'Propiedad '+i+': completa el nombre y la firma del propietario, o quita su firma.',collabInc:i=>'Propiedad '+i+': completa el nombre y la firma del colaborador, o quita su firma.',
+ ownerInc:i=>'Propiedad '+i+': completa el nombre y la firma del propietario, o quita su firma.',collabInc:'Completa el nombre y la firma del colaborador, o quita su firma.',
  needAgentSig:'Falta la firma del agente.',
  queued:'Sin conexión suficiente: la visita queda guardada en este dispositivo y se enviará sola cuando haya señal. No borres los datos del navegador.',
  saveFail:c=>'No se pudo guardar la visita ('+c+'). Inténtalo de nuevo.',
@@ -138,7 +140,7 @@ es:{
  fbTitle:'Valoración y feedback',fbPh:'Comentarios del cliente sobre la propiedad (opcional)',fbSave:'Guardar valoración y feedback',unsaved:'Cambios sin guardar',fbSaved:'Guardado',
  savedLocal:'Guardado en el dispositivo; se enviará con la visita.',needOnline:'Necesitas conexión para guardar los cambios.',fbDenied:'No tienes permiso para editar esta visita.',fbFail:c=>'No se pudo guardar ('+c+').',
  noPdf:'No hay visitas que descargar.',pdfLoad:'No se pudo cargar el generador de PDF.',pdfErr:'Error al generar el PDF.',
- pdfT1:'Ficha de visita',pdfTN:'Registro de visitas',gen:'Generado el',hDate:'FECHA',hClient:'CLIENTE',hAgent:'AGENTE',hProps:'PROPIEDADES VISITADAS',refP:'Ref.',pClientSig:'FIRMA CLIENTE',pAgentSig:'FIRMA AGENTE',
+ pdfT1:'Ficha de visita',pdfTN:'Registro de visitas',gen:'Generado el',hDate:'FECHA',hClient:'CLIENTE',hAgent:'AGENTE',hProps:'PROPIEDADES VISITADAS',refP:'Ref.',pClientSig:'FIRMA CLIENTE',pAgentSig:'FIRMA AGENTE',pCollabSig:'FIRMA COLABORADOR',
  aBad:'Correo o contraseña incorrectos.',aMany:'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.',aNet:'Sin conexión. Inténtalo de nuevo.',aFail:'No se pudo iniciar sesión.',
  aEmpty:'Escribe tu correo y tu contraseña.',aMail:'Escribe tu correo arriba y pulsa de nuevo.',aReset:'Si el correo está dado de alta, recibirás un enlace para cambiar la contraseña.',
  logoutConfirm:n=>'Hay '+n+' visita(s) pendiente(s) de enviar. Se enviarán cuando vuelvas a entrar con este usuario. ¿Salir ahora?',
@@ -161,7 +163,7 @@ en:{
  frN:'By signing this document, the client confirms that they have carried out the viewings of all the properties indicated above.',
  save:'Save viewing',saving:'Saving…',saved:'Viewing saved.',
  needDate:'Please enter the date.',needProp:(i,multi)=>multi?'Property '+i+': enter the reference or the property name.':'Enter the reference or the property name.',
- ownerInc:i=>'Property '+i+': complete the owner name and signature, or remove the signature.',collabInc:i=>'Property '+i+': complete the collaborator name and signature, or remove the signature.',
+ ownerInc:i=>'Property '+i+': complete the owner name and signature, or remove the signature.',collabInc:'Complete the collaborator name and signature, or remove the signature.',
  needAgentSig:'The agent signature is missing.',
  queued:'Not enough signal: the viewing is saved on this device and will be sent automatically when you have signal. Do not clear your browser data.',
  saveFail:c=>'The viewing could not be saved ('+c+'). Please try again.',
@@ -174,7 +176,7 @@ en:{
  fbTitle:'Rating and feedback',fbPh:'Client comments about the property (optional)',fbSave:'Save rating and feedback',unsaved:'Unsaved changes',fbSaved:'Saved',
  savedLocal:'Saved on the device; it will be sent with the viewing.',needOnline:'You need a connection to save changes.',fbDenied:'You do not have permission to edit this viewing.',fbFail:c=>'Could not save ('+c+').',
  noPdf:'There are no viewings to download.',pdfLoad:'Could not load the PDF generator.',pdfErr:'Error generating the PDF.',
- pdfT1:'Viewing record',pdfTN:'Viewing log',gen:'Generated on',hDate:'DATE',hClient:'CLIENT',hAgent:'AGENT',hProps:'PROPERTIES VIEWED',refP:'Ref.',pClientSig:'CLIENT SIGNATURE',pAgentSig:'AGENT SIGNATURE',
+ pdfT1:'Viewing record',pdfTN:'Viewing log',gen:'Generated on',hDate:'DATE',hClient:'CLIENT',hAgent:'AGENT',hProps:'PROPERTIES VIEWED',refP:'Ref.',pClientSig:'CLIENT SIGNATURE',pAgentSig:'AGENT SIGNATURE',pCollabSig:'COLLABORATOR SIGNATURE',
  aBad:'Incorrect email or password.',aMany:'Too many attempts. Wait a few minutes and try again.',aNet:'No connection. Please try again.',aFail:'Could not sign in.',
  aEmpty:'Enter your email and password.',aMail:'Enter your email above and press again.',aReset:'If the email is registered, you will receive a link to change your password.',
  logoutConfirm:n=>n+' viewing(s) are waiting to be sent. They will be sent when you sign in again with this user. Log out now?',
@@ -209,7 +211,7 @@ function pad(id){
   pads[id]={init:size,clear(){x.setTransform(1,0,0,1,0,0);x.clearRect(0,0,c.width,c.height);x.scale(2,2);dirty=false},empty:()=>!dirty,
     data(){const t=document.createElement('canvas');t.width=300;t.height=100;t.getContext('2d').drawImage(c,0,0,300,100);return t.toDataURL('image/png')}};
 }
-pad('sc');pad('sa');
+pad('sc');pad('sa');pad('cvs');
 function nombre(e){const l=String(e||'').split('@')[0],f=l.split(/[._\-+0-9]+/).filter(Boolean)[0]||l;return f?f.charAt(0).toUpperCase()+f.slice(1).toLowerCase():'-'}
 function getProps(v){return Array.isArray(v.props)&&v.props.length?v.props:[{ref:v.ref,property:v.property}]}
 const lg=v=>v&&v.lang==='en'?'en':'es';
@@ -222,20 +224,21 @@ function addRow(){
   b.innerHTML=`<div class="row"><b class="mu"><span data-i="prop"></span> <span class="pn"></span></b><button type="button" class="rm" onclick="rmRow(${n})" data-i="remove"></button></div>
   <label for="r${n}" data-i="ref"></label><input id="r${n}" autocomplete="off">
   <label for="p${n}" data-i="propName"></label><input id="p${n}" autocomplete="off">
-  <div class="btns"><button type="button" id="ob${n}" onclick="togSig(${n},'o')"></button><button type="button" id="cb${n}" onclick="togSig(${n},'c')"></button></div>
-  <div id="ow${n}" hidden><label for="on${n}" data-i="ownerName"></label><input id="on${n}" autocomplete="off"><label data-i="ownerSig"></label><canvas id="os${n}"></canvas><button type="button" onclick="pads.os${n}.clear()" style="margin-top:6px" data-i="clearSig"></button></div>
-  <div id="cw${n}" hidden><label for="cn${n}" data-i="collabName"></label><input id="cn${n}" autocomplete="off"><label data-i="collabSig"></label><canvas id="cs${n}"></canvas><button type="button" onclick="pads.cs${n}.clear()" style="margin-top:6px" data-i="clearSig"></button></div>`;
-  $('props').appendChild(b);pad('os'+n);pad('cs'+n);rows.push(n);tr(b);sigBtn(n,'o');sigBtn(n,'c');renumber();
+  <div><button type="button" id="ob${n}" onclick="togSig(${n},'o')" style="margin-top:10px"></button></div>
+  <div id="ow${n}" hidden><label for="on${n}" data-i="ownerName"></label><input id="on${n}" autocomplete="off"><label data-i="ownerSig"></label><canvas id="os${n}"></canvas><button type="button" onclick="pads.os${n}.clear()" style="margin-top:6px" data-i="clearSig"></button></div>`;
+  $('props').appendChild(b);pad('os'+n);rows.push(n);tr(b);sigBtn(n,'o');renumber();
 }
-function rmRow(n){if(rows.length<2)return;$('pr'+n).remove();delete pads['os'+n];delete pads['cs'+n];rows=rows.filter(x=>x!==n);renumber()}
-const SG={o:{w:'ow',p:'os',n:'on',b:'ob',add:'ownerAdd',rm:'ownerRm'},c:{w:'cw',p:'cs',n:'cn',b:'cb',add:'collabAdd',rm:'collabRm'}};
+function rmRow(n){if(rows.length<2)return;$('pr'+n).remove();delete pads['os'+n];rows=rows.filter(x=>x!==n);renumber()}
+const SG={o:{w:'ow',p:'os',n:'on',b:'ob',add:'ownerAdd',rm:'ownerRm'}};
 function sigBtn(n,k){const s=SG[k];$(s.b+n).textContent=t($(s.w+n).hidden?s.add:s.rm)}
 function togSig(n,k){
   const s=SG[k],w=$(s.w+n),open=w.hidden;w.hidden=!open;
   if(open)pads[s.p+n].init();else{pads[s.p+n].clear();$(s.n+n).value=''}
   sigBtn(n,k);
 }
-function resetRows(){$('props').innerHTML='';Object.keys(pads).filter(k=>/^(os|cs)\d/.test(k)).forEach(k=>delete pads[k]);rows=[];addRow()}
+function collabBtn(){$('cvb').textContent=t($('cvw').hidden?'collabAdd':'collabRm')}
+function togCollab(){const w=$('cvw'),open=w.hidden;w.hidden=!open;if(open)pads.cvs.init();else{pads.cvs.clear();$('cvn').value=''}collabBtn()}
+function resetRows(){$('props').innerHTML='';Object.keys(pads).filter(k=>/^os\d/.test(k)).forEach(k=>delete pads[k]);rows=[];addRow()}
 addRow();
 function clr(id){pads[id].clear()}
 function msg(x){$('msg').textContent=x}
@@ -342,11 +345,13 @@ async function pdf(id){
       if(list.length===1){if(y+H>279){d.addPage();y=20}y=Math.max(y,279-H)}else need(H);
       rule(120);y+=7;
       d.setFontSize(9);d.setFont(undefined,'bold');d.text(pl,15,y);y+=pl.length*4.6+4;
-      label(P('pClientSig'),15);label(P('pAgentSig'),110);y+=2;
-      if(v.clientSig){try{d.addImage(v.clientSig,'PNG',15,y,60,20)}catch(e){}}
-      try{d.addImage(v.agentSig,'PNG',110,y,60,20)}catch(e){}
-      y+=21;d.setDrawColor(150);d.setLineWidth(0.2);d.line(15,y,90,y);d.line(110,y,185,y);y+=4.5;
-      d.setFontSize(8);d.setFont(undefined,'normal');d.text(String(v.client||''),15,y);d.text(nombre(v.agentEmail),110,y);y+=7;
+      const three=!!v.collabSig,cx=three?[15,78,141]:[15,110],iw=three?48:60,ih=iw/3,lw=three?50:75;
+      label(P('pClientSig'),cx[0]);label(P('pAgentSig'),cx[1]);if(three)label(P('pCollabSig'),cx[2]);y+=2;
+      if(v.clientSig){try{d.addImage(v.clientSig,'PNG',cx[0],y,iw,ih)}catch(e){}}
+      try{d.addImage(v.agentSig,'PNG',cx[1],y,iw,ih)}catch(e){}
+      if(three){try{d.addImage(v.collabSig,'PNG',cx[2],y,iw,ih)}catch(e){}}
+      y+=21;d.setDrawColor(150);d.setLineWidth(0.2);cx.forEach(x=>d.line(x,y,x+lw,y));y+=4.5;
+      d.setFontSize(8);d.setFont(undefined,'normal');d.text(String(v.client||''),cx[0],y);d.text(nombre(v.agentEmail),cx[1],y);if(three)d.text(d.splitTextToSize(String(v.collabName||''),55)[0],cx[2],y);y+=7;
       if(vi<list.length-1){y+=3;d.setDrawColor(120);d.setLineWidth(0.6);d.line(15,y,195,y);d.setLineWidth(0.2);y+=10}
     });
     const np=d.getNumberOfPages();d.setFontSize(6);d.setTextColor(110);
@@ -404,7 +409,7 @@ function draw(){
   ${plist}
   <div style="margin-top:6px"><span class="mu">${esc(t('clientL'))}:</span> <b>${v.client?esc(v.client):'—'}</b></div>
   <div><span class="mu">${esc(t('agentL'))}:</span> <b>${esc(nombre(v.agentEmail))}</b></div>
-  <div class="sigs">${v.clientSig?`<figure><img src="${v.clientSig}" alt="${esc(t('clientSig'))}"><figcaption>${esc(t('clientSig'))}</figcaption></figure>`:`<div class="mu" style="align-self:center">${esc(t('clientUnsigned'))}</div>`}<figure><img src="${v.agentSig}" alt="${esc(t('agentSig'))}"><figcaption>${esc(t('agentSig'))}</figcaption></figure></div>
+  <div class="sigs">${v.clientSig?`<figure><img src="${v.clientSig}" alt="${esc(t('clientSig'))}"><figcaption>${esc(t('clientSig'))}</figcaption></figure>`:`<div class="mu" style="align-self:center">${esc(t('clientUnsigned'))}</div>`}<figure><img src="${v.agentSig}" alt="${esc(t('agentSig'))}"><figcaption>${esc(t('agentSig'))}</figcaption></figure>${v.collabSig?`<figure><img src="${v.collabSig}" alt="${esc(t('collabSig'))}"><figcaption>${esc(t('collabSig'))}${v.collabName?' · '+esc(v.collabName):''}</figcaption></figure>`:''}</div>
   ${fb}
   <div class="acts"><button onclick="pdf('${v.id}')">${esc(t('dlPdf'))}</button>${own?`<button onclick="del('${v.id}')">${esc(t('del'))}</button>`:''}</div></div>`}).join('');
   upd();
@@ -425,18 +430,25 @@ $('save').onclick=async()=>{
     const ref=$('r'+n).value.trim(),property=$('p'+n).value.trim(),idx=rows.indexOf(n)+1;
     if(!ref&&!property)return msg(t('needProp',idx,rows.length>1));
     const p={ref,property};
-    for(const k of ['o','c']){
-      const s=SG[k];if($(s.w+n).hidden)continue;
-      const nm=$(s.n+n).value.trim(),has=!pads[s.p+n].empty();
-      if(!nm&&!has)continue;
-      if(!nm||!has)return msg(t(k==='o'?'ownerInc':'collabInc',idx));
-      if(k==='o'){p.ownerName=nm;p.ownerSig=pads['os'+n].data()}else{p.collabName=nm;p.collabSig=pads['cs'+n].data()}
+    {
+      const sg=SG.o;
+      if(!$(sg.w+n).hidden){
+        const nm=$(sg.n+n).value.trim(),has=!pads[sg.p+n].empty();
+        if(nm||has){
+          if(!nm||!has)return msg(t('ownerInc',idx));
+          p.ownerName=nm;p.ownerSig=pads['os'+n].data();
+        }
+      }
     }
     props.push(p);
   }
   const v={date:$('f').value,client:$('c').value.trim(),props,ref:props[0].ref,property:props[0].property,rating:0,feedback:'',lang:LANG};
   if(!v.date)return msg(t('needDate'));
   if(pads.sa.empty())return msg(t('needAgentSig'));
+  if(!$('cvw').hidden){
+    const cn=$('cvn').value.trim(),ch=!pads.cvs.empty();
+    if(cn||ch){if(!cn||!ch)return msg(t('collabInc'));v.collabName=cn;v.collabSig=pads.cvs.data()}
+  }
   v.clientSig=pads.sc.empty()?'':pads.sc.data();v.agentSig=pads.sa.data();v.id='v'+Date.now();v.created=Date.now();
   v.agentUid=me.uid;v.agentEmail=(me.email||'').toLowerCase();
   $('save').disabled=true;msg(t('saving'));
@@ -451,7 +463,7 @@ $('save').onclick=async()=>{
   }
   if(queued){pend.push(v);savePend();merge();render();msg(t('queued'))}
   else msg(t('saved'));
-  resetRows();$('c').value='';clr('sc');clr('sa');
+  resetRows();$('c').value='';clr('sc');clr('sa');if(!$('cvw').hidden)togCollab();
   $('save').disabled=false;
 };
 async function flush(){
@@ -533,7 +545,7 @@ function applyLang(){
   tr(document);
   $('legal').innerHTML=esc(t('legal')).replace('www.aepd.es','<a href="https://www.aepd.es" target="_blank" rel="noopener">www.aepd.es</a>')+'<br><b>'+esc(t('legalSign'))+'</b>';
   ['es','en'].forEach(l=>$('lg-'+l).classList.toggle('on',l===LANG));
-  rows.forEach(n=>{sigBtn(n,'o');sigBtn(n,'c')});renumber();
+  rows.forEach(n=>sigBtn(n,'o'));collabBtn();renumber();
   if(me){$('who').textContent=me.email+(isSup?t('sup'):'');checkLegacy()}
   render();
 }
