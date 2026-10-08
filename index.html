@@ -127,7 +127,7 @@ es:{
  frN:'El cliente, al firmar este documento, confirma que ha realizado las visitas a todas las propiedades indicadas arriba.',
  save:'Guardar visita',saving:'Guardando…',saved:'Visita guardada.',
  needDate:'Indica la fecha.',needProp:(i,multi)=>multi?'Propiedad '+i+': indica la referencia o el nombre de la propiedad.':'Indica la referencia o el nombre de la propiedad.',
- ownerInc:i=>'Propiedad '+i+': completa el nombre y la firma del propietario, o quita su firma.',collabInc:'Completa el nombre y la firma del colaborador, o quita su firma.',
+ ownerInc:i=>'Propiedad '+i+': completa el nombre y la firma del propietario, o quita su firma.',collabInc:'Completa el nombre y la firma del colaborador, o quita su firma.',collabIncP:i=>'Propiedad '+i+': completa el nombre y la firma del colaborador, o quita su firma.',
  needAgentSig:'Falta la firma del agente.',
  queued:'Sin conexión suficiente: la visita queda guardada en este dispositivo y se enviará sola cuando haya señal. No borres los datos del navegador.',
  saveFail:c=>'No se pudo guardar la visita ('+c+'). Inténtalo de nuevo.',
@@ -163,7 +163,7 @@ en:{
  frN:'By signing this document, the client confirms that they have carried out the viewings of all the properties indicated above.',
  save:'Save viewing',saving:'Saving…',saved:'Viewing saved.',
  needDate:'Please enter the date.',needProp:(i,multi)=>multi?'Property '+i+': enter the reference or the property name.':'Enter the reference or the property name.',
- ownerInc:i=>'Property '+i+': complete the owner name and signature, or remove the signature.',collabInc:'Complete the collaborator name and signature, or remove the signature.',
+ ownerInc:i=>'Property '+i+': complete the owner name and signature, or remove the signature.',collabInc:'Complete the collaborator name and signature, or remove the signature.',collabIncP:i=>'Property '+i+': complete the collaborator name and signature, or remove the signature.',
  needAgentSig:'The agent signature is missing.',
  queued:'Not enough signal: the viewing is saved on this device and will be sent automatically when you have signal. Do not clear your browser data.',
  saveFail:c=>'The viewing could not be saved ('+c+'). Please try again.',
@@ -224,12 +224,13 @@ function addRow(){
   b.innerHTML=`<div class="row"><b class="mu"><span data-i="prop"></span> <span class="pn"></span></b><button type="button" class="rm" onclick="rmRow(${n})" data-i="remove"></button></div>
   <label for="r${n}" data-i="ref"></label><input id="r${n}" autocomplete="off">
   <label for="p${n}" data-i="propName"></label><input id="p${n}" autocomplete="off">
-  <div><button type="button" id="ob${n}" onclick="togSig(${n},'o')" style="margin-top:10px"></button></div>
-  <div id="ow${n}" hidden><label for="on${n}" data-i="ownerName"></label><input id="on${n}" autocomplete="off"><label data-i="ownerSig"></label><canvas id="os${n}"></canvas><button type="button" onclick="pads.os${n}.clear()" style="margin-top:6px" data-i="clearSig"></button></div>`;
-  $('props').appendChild(b);pad('os'+n);rows.push(n);tr(b);sigBtn(n,'o');renumber();
+  <div class="btns"><button type="button" id="ob${n}" onclick="togSig(${n},'o')"></button><button type="button" id="cb${n}" onclick="togSig(${n},'c')"></button></div>
+  <div id="ow${n}" hidden><label for="on${n}" data-i="ownerName"></label><input id="on${n}" autocomplete="off"><label data-i="ownerSig"></label><canvas id="os${n}"></canvas><button type="button" onclick="pads.os${n}.clear()" style="margin-top:6px" data-i="clearSig"></button></div>
+  <div id="cw${n}" hidden><label for="cn${n}" data-i="collabName"></label><input id="cn${n}" autocomplete="off"><label data-i="collabSig"></label><canvas id="cs${n}"></canvas><button type="button" onclick="pads.cs${n}.clear()" style="margin-top:6px" data-i="clearSig"></button></div>`;
+  $('props').appendChild(b);pad('os'+n);pad('cs'+n);rows.push(n);tr(b);sigBtn(n,'o');sigBtn(n,'c');renumber();
 }
-function rmRow(n){if(rows.length<2)return;$('pr'+n).remove();delete pads['os'+n];rows=rows.filter(x=>x!==n);renumber()}
-const SG={o:{w:'ow',p:'os',n:'on',b:'ob',add:'ownerAdd',rm:'ownerRm'}};
+function rmRow(n){if(rows.length<2)return;$('pr'+n).remove();delete pads['os'+n];delete pads['cs'+n];rows=rows.filter(x=>x!==n);renumber()}
+const SG={o:{w:'ow',p:'os',n:'on',b:'ob',add:'ownerAdd',rm:'ownerRm'},c:{w:'cw',p:'cs',n:'cn',b:'cb',add:'collabAdd',rm:'collabRm'}};
 function sigBtn(n,k){const s=SG[k];$(s.b+n).textContent=t($(s.w+n).hidden?s.add:s.rm)}
 function togSig(n,k){
   const s=SG[k],w=$(s.w+n),open=w.hidden;w.hidden=!open;
@@ -238,7 +239,7 @@ function togSig(n,k){
 }
 function collabBtn(){$('cvb').textContent=t($('cvw').hidden?'collabAdd':'collabRm')}
 function togCollab(){const w=$('cvw'),open=w.hidden;w.hidden=!open;if(open)pads.cvs.init();else{pads.cvs.clear();$('cvn').value=''}collabBtn()}
-function resetRows(){$('props').innerHTML='';Object.keys(pads).filter(k=>/^os\d/.test(k)).forEach(k=>delete pads[k]);rows=[];addRow()}
+function resetRows(){$('props').innerHTML='';Object.keys(pads).filter(k=>/^(os|cs)\d/.test(k)).forEach(k=>delete pads[k]);rows=[];addRow()}
 addRow();
 function clr(id){pads[id].clear()}
 function msg(x){$('msg').textContent=x}
@@ -430,15 +431,12 @@ $('save').onclick=async()=>{
     const ref=$('r'+n).value.trim(),property=$('p'+n).value.trim(),idx=rows.indexOf(n)+1;
     if(!ref&&!property)return msg(t('needProp',idx,rows.length>1));
     const p={ref,property};
-    {
-      const sg=SG.o;
-      if(!$(sg.w+n).hidden){
-        const nm=$(sg.n+n).value.trim(),has=!pads[sg.p+n].empty();
-        if(nm||has){
-          if(!nm||!has)return msg(t('ownerInc',idx));
-          p.ownerName=nm;p.ownerSig=pads['os'+n].data();
-        }
-      }
+    for(const k of ['o','c']){
+      const sg=SG[k];if($(sg.w+n).hidden)continue;
+      const nm=$(sg.n+n).value.trim(),has=!pads[sg.p+n].empty();
+      if(!nm&&!has)continue;
+      if(!nm||!has)return msg(t(k==='o'?'ownerInc':'collabIncP',idx));
+      if(k==='o'){p.ownerName=nm;p.ownerSig=pads['os'+n].data()}else{p.collabName=nm;p.collabSig=pads['cs'+n].data()}
     }
     props.push(p);
   }
@@ -545,7 +543,7 @@ function applyLang(){
   tr(document);
   $('legal').innerHTML=esc(t('legal')).replace('www.aepd.es','<a href="https://www.aepd.es" target="_blank" rel="noopener">www.aepd.es</a>')+'<br><b>'+esc(t('legalSign'))+'</b>';
   ['es','en'].forEach(l=>$('lg-'+l).classList.toggle('on',l===LANG));
-  rows.forEach(n=>sigBtn(n,'o'));collabBtn();renumber();
+  rows.forEach(n=>{sigBtn(n,'o');sigBtn(n,'c')});collabBtn();renumber();
   if(me){$('who').textContent=me.email+(isSup?t('sup'):'');checkLegacy()}
   render();
 }
