@@ -135,7 +135,7 @@ es:{
  search:'Buscar por nº de referencia o propiedad',allPeriod:'Todo el periodo',quarters:'Trimestres',monthsL:'Meses',qLabel:(q,y)=>'T'+q+' '+y,
  months:['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'],allAgents:'Todos los agentes',
  selAll:'Seleccionar todas',cnt:n=>n+' hojas',cntF:(a,b)=>a+' de '+b+' hojas',empty:'Aún no hay visitas.',noMatch:'No hay visitas que coincidan con la búsqueda.',
- propL:'Propiedad',ownerL:'Propietario',collabL:'Colaborador',clientL:'Cliente',agentL:'Agente',pendTag:'pendiente de enviar',dlPdf:'Descargar PDF',del:'Eliminar',
+ propL:'Propiedad',ownerL:'Propietario',collabL:'Colaborador',clientL:'Cliente',agentL:'Agente',pendTag:'pendiente de enviar',dlPdf:'Descargar PDF',shPdf:'Compartir PDF',shUnsupported:'Este dispositivo no permite compartir el PDF desde aquí; se ha descargado.',del:'Eliminar',
  delConfirm:'¿Eliminar esta visita?',delFail:c=>'No se pudo eliminar ('+c+').',clientUnsigned:'Firma cliente: sin firmar',
  fbTitle:'Valoración y feedback',fbPh:'Comentarios del cliente sobre la propiedad (opcional)',fbSave:'Guardar valoración y feedback',unsaved:'Cambios sin guardar',fbSaved:'Guardado',
  savedLocal:'Guardado en el dispositivo; se enviará con la visita.',needOnline:'Necesitas conexión para guardar los cambios.',fbDenied:'No tienes permiso para editar esta visita.',fbFail:c=>'No se pudo guardar ('+c+').',
@@ -171,7 +171,7 @@ en:{
  search:'Search by reference no. or property',allPeriod:'All time',quarters:'Quarters',monthsL:'Months',qLabel:(q,y)=>'Q'+q+' '+y,
  months:['January','February','March','April','May','June','July','August','September','October','November','December'],allAgents:'All agents',
  selAll:'Select all',cnt:n=>n+' sheets',cntF:(a,b)=>a+' of '+b+' sheets',empty:'No viewings yet.',noMatch:'No viewings match your search.',
- propL:'Property',ownerL:'Owner',collabL:'Collaborator',clientL:'Client',agentL:'Agent',pendTag:'waiting to be sent',dlPdf:'Download PDF',del:'Delete',
+ propL:'Property',ownerL:'Owner',collabL:'Collaborator',clientL:'Client',agentL:'Agent',pendTag:'waiting to be sent',dlPdf:'Download PDF',shPdf:'Share PDF',shUnsupported:'This device cannot share the PDF from here; it has been downloaded instead.',del:'Delete',
  delConfirm:'Delete this viewing?',delFail:c=>'Could not delete ('+c+').',clientUnsigned:'Client signature: not signed',
  fbTitle:'Rating and feedback',fbPh:'Client comments about the property (optional)',fbSave:'Save rating and feedback',unsaved:'Unsaved changes',fbSaved:'Saved',
  savedLocal:'Saved on the device; it will be sent with the viewing.',needOnline:'You need a connection to save changes.',fbDenied:'You do not have permission to edit this viewing.',fbFail:c=>'Could not save ('+c+').',
@@ -284,7 +284,7 @@ function upd(){
   $('cnt').textContent=isFiltered()?t('cntF',f.length,visits.length):t('cnt',visits.length);
 }
 /* ===== PDF (sin valoración ni feedback) ===== */
-async function pdf(id){
+async function pdf(id,share){
   const m=$('msg2');m.textContent='';
   const list=id?visits.filter(v=>v.id===id):(sel.size?sorted().filter(v=>sel.has(v.id)):filtered());
   if(!list.length){m.textContent=t('noPdf');return}
@@ -361,7 +361,16 @@ async function pdf(id){
     const data=d.output('arraybuffer');
     const p0=getProps(list[0])[0];
     const name=list.length===1?'visita-'+String(p0.ref||p0.property||list[0].date).replace(/[^\w-]+/g,'_')+'.pdf':'visitas.pdf';
-    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type:'application/pdf'}));a.download=name;a.click();
+    const blob=new Blob([data],{type:'application/pdf'});
+    if(share){
+      let file=null;try{file=new File([blob],name,{type:'application/pdf'})}catch(e){}
+      if(file&&navigator.canShare&&navigator.canShare({files:[file]})){
+        try{await navigator.share({files:[file],title:name.replace(/\.pdf$/,'')});return}
+        catch(e){if(e&&e.name==='AbortError')return}
+      }
+      m.textContent=t('shUnsupported');
+    }
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();
   }catch(e){m.textContent=t('pdfErr')}
 }
 /* ===== Lista, con valoración y feedback editables dentro de cada visita ===== */
@@ -412,7 +421,7 @@ function draw(){
   <div><span class="mu">${esc(t('agentL'))}:</span> <b>${esc(nombre(v.agentEmail))}</b></div>
   <div class="sigs">${v.clientSig?`<figure><img src="${v.clientSig}" alt="${esc(t('clientSig'))}"><figcaption>${esc(t('clientSig'))}</figcaption></figure>`:`<div class="mu" style="align-self:center">${esc(t('clientUnsigned'))}</div>`}<figure><img src="${v.agentSig}" alt="${esc(t('agentSig'))}"><figcaption>${esc(t('agentSig'))}</figcaption></figure>${v.collabSig?`<figure><img src="${v.collabSig}" alt="${esc(t('collabSig'))}"><figcaption>${esc(t('collabSig'))}${v.collabName?' · '+esc(v.collabName):''}</figcaption></figure>`:''}</div>
   ${fb}
-  <div class="acts"><button onclick="pdf('${v.id}')">${esc(t('dlPdf'))}</button>${own?`<button onclick="del('${v.id}')">${esc(t('del'))}</button>`:''}</div></div>`}).join('');
+  <div class="acts"><button onclick="pdf('${v.id}')">${esc(t('dlPdf'))}</button><button onclick="pdf('${v.id}',true)">${esc(t('shPdf'))}</button>${own?`<button onclick="del('${v.id}')">${esc(t('del'))}</button>`:''}</div></div>`}).join('');
   upd();
 }
 $('list').addEventListener('focusout',e=>{
