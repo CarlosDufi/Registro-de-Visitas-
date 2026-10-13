@@ -211,14 +211,24 @@ firebase.initializeApp({apiKey:"AIzaSyB8g6XsfZKAuJUq7CwuvlgbGIE6tPxsolo",authDom
 const auth=firebase.auth();db=firebase.firestore();
 $('f').value=new Date().toISOString().slice(0,10);
 const pads={};
+/* Longitud mínima de trazo (px de pantalla) para considerar que hay firma: un toque o un roce no cuenta */
+const MIN_INK=40;
+const padRO=window.ResizeObserver?new ResizeObserver(es=>es.forEach(e=>e.target._size&&e.target._size())):null;
 function pad(id){
-  const c=$(id),x=c.getContext('2d');let d=false,dirty=false;
-  function size(){const r=c.getBoundingClientRect(),s=2;if(!r.width||c.width===Math.round(r.width*s))return;c.width=r.width*s;c.height=r.height*s;x.scale(s,s);x.lineWidth=2;x.lineCap='round';x.strokeStyle='#111'}
+  /* Los trazos se guardan en coordenadas relativas (0..1) para poder redibujarlos si el lienzo cambia de tamaño (p. ej. al girar el móvil) */
+  const c=$(id),x=c.getContext('2d');let d=false,ink=0,strokes=[],st=null,w=0,h=0;
+  function redraw(){
+    x.setTransform(1,0,0,1,0,0);x.clearRect(0,0,c.width,c.height);x.setTransform(2,0,0,2,0,0);
+    x.lineWidth=2;x.lineCap='round';x.lineJoin='round';x.strokeStyle='#111';
+    strokes.forEach(s=>{x.beginPath();s.forEach(([u,v],i)=>i?x.lineTo(u*w,v*h):x.moveTo(u*w,v*h));x.stroke()});
+  }
+  function size(){const r=c.getBoundingClientRect();if(!r.width||(r.width===w&&r.height===h))return;w=r.width;h=r.height;c.width=Math.round(w*2);c.height=Math.round(h*2);redraw()}
+  c._size=size;if(padRO)padRO.observe(c);
   const pos=e=>{const r=c.getBoundingClientRect();return[e.clientX-r.left,e.clientY-r.top]};
-  c.addEventListener('pointerdown',e=>{d=true;dirty=true;c.setPointerCapture(e.pointerId);x.beginPath();x.moveTo(...pos(e))});
-  c.addEventListener('pointermove',e=>{if(d){x.lineTo(...pos(e));x.stroke()}});
+  c.addEventListener('pointerdown',e=>{size();if(!w)return;d=true;c.setPointerCapture(e.pointerId);const p=pos(e);st=[[p[0]/w,p[1]/h]];strokes.push(st);x.beginPath();x.moveTo(...p)});
+  c.addEventListener('pointermove',e=>{if(!d)return;const p=pos(e),q=st[st.length-1];ink+=Math.hypot(p[0]-q[0]*w,p[1]-q[1]*h);st.push([p[0]/w,p[1]/h]);x.lineTo(...p);x.stroke()});
   ['pointerup','pointercancel'].forEach(t=>c.addEventListener(t,()=>d=false));
-  pads[id]={init:size,clear(){x.setTransform(1,0,0,1,0,0);x.clearRect(0,0,c.width,c.height);x.scale(2,2);dirty=false},empty:()=>!dirty,
+  pads[id]={init:size,clear(){strokes=[];st=null;ink=0;d=false;redraw()},empty:()=>ink<MIN_INK,off(){if(padRO)padRO.unobserve(c)},
     data(){const t=document.createElement('canvas');t.width=300;t.height=100;t.getContext('2d').drawImage(c,0,0,300,100);return t.toDataURL('image/png')}};
 }
 pad('sc');pad('sa');pad('cvs');
@@ -285,7 +295,7 @@ function addRow(){
     onEdit:()=>{if($('r'+n).dataset.pid){delete $('r'+n).dataset.pid;linkNote(n)}}});
 }
 function linkNote(n){const st=$('st'+n);if($('r'+n).dataset.pid){st.innerHTML='<span class="lk">✓ '+esc(t('linked'))+'</span>'}else st.innerHTML=''}
-function rmRow(n){if(rows.length<2)return;$('pr'+n).remove();delete pads['os'+n];delete pads['cs'+n];delete rowCombo[n];rows=rows.filter(x=>x!==n);renumber()}
+function rmRow(n){if(rows.length<2)return;$('pr'+n).remove();['os','cs'].forEach(k=>{pads[k+n].off();delete pads[k+n]});delete rowCombo[n];rows=rows.filter(x=>x!==n);renumber()}
 const SG={o:{w:'ow',p:'os',n:'on',b:'ob',add:'ownerAdd',rm:'ownerRm'},c:{w:'cw',p:'cs',n:'cn',b:'cb',add:'collabAdd',rm:'collabRm'}};
 function sigBtn(n,k){const s=SG[k];$(s.b+n).textContent=t($(s.w+n).hidden?s.add:s.rm)}
 function togSig(n,k){
@@ -295,7 +305,7 @@ function togSig(n,k){
 }
 function collabBtn(){$('cvb').textContent=t($('cvw').hidden?'collabAdd':'collabRm')}
 function togCollab(){const w=$('cvw'),open=w.hidden;w.hidden=!open;if(open)pads.cvs.init();else{pads.cvs.clear();$('cvn').value=''}collabBtn()}
-function resetRows(){$('props').innerHTML='';Object.keys(rowCombo).forEach(k=>delete rowCombo[k]);Object.keys(pads).filter(k=>/^(os|cs)\d/.test(k)).forEach(k=>delete pads[k]);rows=[];addRow()}
+function resetRows(){$('props').innerHTML='';Object.keys(rowCombo).forEach(k=>delete rowCombo[k]);Object.keys(pads).filter(k=>/^(os|cs)\d/.test(k)).forEach(k=>{pads[k].off();delete pads[k]});rows=[];addRow()}
 addRow();
 const clientCombo=combo({input:'c',status:'stc',list:'sgc',fn:'searchContacts',
   render:it=>({title:it.name,sub:it.reference_no}),
