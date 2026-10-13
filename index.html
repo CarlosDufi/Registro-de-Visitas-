@@ -134,7 +134,7 @@ es:{
  fr1:'El cliente, al firmar este documento, confirma que ha realizado la visita a la propiedad indicada arriba.',
  frN:'El cliente, al firmar este documento, confirma que ha realizado las visitas a todas las propiedades indicadas arriba.',
  save:'Guardar visita',saving:'Guardando…',saved:'Visita guardada.',
- needDate:'Indica la fecha.',needProp:(i,multi)=>multi?'Propiedad '+i+': indica la referencia o el nombre de la propiedad.':'Indica la referencia o el nombre de la propiedad.',
+ needDate:'Indica la fecha.',noFuture:'La fecha no puede ser posterior a hoy.',needProp:(i,multi)=>multi?'Propiedad '+i+': indica la referencia o el nombre de la propiedad.':'Indica la referencia o el nombre de la propiedad.',
  ownerInc:i=>'Propiedad '+i+': completa el nombre y la firma del propietario, o quita su firma.',collabInc:'Completa el nombre y la firma del colaborador, o quita su firma.',collabIncP:i=>'Propiedad '+i+': completa el nombre y la firma del colaborador, o quita su firma.',
  needAgentSig:'Falta la firma del agente.',
  queued:'Sin conexión suficiente: la visita queda guardada en este dispositivo y se enviará sola cuando haya señal. No borres los datos del navegador.',
@@ -171,7 +171,7 @@ en:{
  fr1:'By signing this document, the client confirms that they have carried out the viewing of the property indicated above.',
  frN:'By signing this document, the client confirms that they have carried out the viewings of all the properties indicated above.',
  save:'Save viewing',saving:'Saving…',saved:'Viewing saved.',
- needDate:'Please enter the date.',needProp:(i,multi)=>multi?'Property '+i+': enter the reference or the property name.':'Enter the reference or the property name.',
+ needDate:'Please enter the date.',noFuture:'The date cannot be later than today.',needProp:(i,multi)=>multi?'Property '+i+': enter the reference or the property name.':'Enter the reference or the property name.',
  ownerInc:i=>'Property '+i+': complete the owner name and signature, or remove the signature.',collabInc:'Complete the collaborator name and signature, or remove the signature.',collabIncP:i=>'Property '+i+': complete the collaborator name and signature, or remove the signature.',
  needAgentSig:'The agent signature is missing.',
  queued:'Not enough signal: the viewing is saved on this device and will be sent automatically when you have signal. Do not clear your browser data.',
@@ -209,7 +209,11 @@ function updPend(){const n=me?pend.filter(p=>p.agentUid===me.uid).length:0;$('pe
 function net(){$('net').hidden=navigator.onLine}
 firebase.initializeApp({apiKey:"AIzaSyB8g6XsfZKAuJUq7CwuvlgbGIE6tPxsolo",authDomain:"hoja-de-visitas.firebaseapp.com",projectId:"hoja-de-visitas",storageBucket:"hoja-de-visitas.firebasestorage.app",messagingSenderId:"441072354523",appId:"1:441072354523:web:1cb7f7458dd759a7f4b8fe"});
 const auth=firebase.auth();db=firebase.firestore();
-$('f').value=new Date().toISOString().slice(0,10);
+/* Fecha local del dispositivo (no UTC). La fecha propuesta se actualiza sola si no se ha cambiado a mano. */
+const hoy=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+let fAuto=hoy();$('f').value=fAuto;$('f').max=fAuto;
+function refreshDate(){const h=hoy();if($('f').value===fAuto)$('f').value=h;fAuto=h;$('f').max=h}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshDate()});
 const pads={};
 /* Longitud mínima de trazo (px de pantalla) para considerar que hay firma: un toque o un roce no cuenta */
 const MIN_INK=40;
@@ -314,7 +318,7 @@ const clientCombo=combo({input:'c',status:'stc',list:'sgc',fn:'searchContacts',
 function clr(id){pads[id].clear()}
 function msg(x){$('msg').textContent=x}
 function esc(s){return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
-function tab(n){$('t1').hidden=n!==1;$('t2').hidden=n!==2;$('b1').classList.toggle('on',n===1);$('b2').classList.toggle('on',n===2);if(n===1)Object.values(pads).forEach(p=>p.init())}
+function tab(n){$('t1').hidden=n!==1;$('t2').hidden=n!==2;$('b1').classList.toggle('on',n===1);$('b2').classList.toggle('on',n===2);if(n===1){refreshDate();Object.values(pads).forEach(p=>p.init())}}
 const fmt=d=>d.split('-').reverse().join('/');
 const sorted=()=>[...visits].sort((a,b)=>b.date.localeCompare(a.date)||b.created-a.created);
 const norm=s=>String(s).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
@@ -364,7 +368,7 @@ async function pdf(id,share){
     const d=new window.jspdf.jsPDF({unit:'mm',format:'a4'});
     try{const i=$('logo');if(!i.naturalWidth)throw 0;const c=document.createElement('canvas');c.width=i.naturalWidth;c.height=i.naturalHeight;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(i,0,0);d.addImage(c.toDataURL('image/jpeg',0.9),'JPEG',80,10,50,50*i.naturalHeight/i.naturalWidth)}catch(e){d.setFontSize(18);d.text('PRESTIGE PROPERTIES',105,30,{align:'center'});d.setFontSize(9);d.text('SALES, RENTALS & CONCIERGE',105,37,{align:'center'})}
     d.setFontSize(15);d.text(T(list.length===1?'pdfT1':'pdfTN',docL),105,58,{align:'center'});
-    d.setFontSize(9);d.text(T('gen',docL)+' '+fmt(new Date().toISOString().slice(0,10)),105,64,{align:'center'});
+    d.setFontSize(9);d.text(T('gen',docL)+' '+fmt(hoy()),105,64,{align:'center'});
     d.setDrawColor(205);d.setLineWidth(0.2);d.line(15,68,195,68);
     let y=74;
     const need=h=>{if(y+h>279){d.addPage();y=20}};
@@ -544,6 +548,7 @@ $('save').onclick=async()=>{
   const v={date:$('f').value,client:$('c').value.trim(),props,ref:props[0].ref,property:props[0].property,rating:0,feedback:'',lang:LANG};
   const cid=Number($('c').dataset.cid);if(v.client&&Number.isInteger(cid)&&cid>0)v.clientId=cid;
   if(!v.date)return msg(t('needDate'));
+  if(v.date>hoy())return msg(t('noFuture'));
   if(pads.sa.empty())return msg(t('needAgentSig'));
   if(!$('cvw').hidden){
     const cn=$('cvn').value.trim(),ch=!pads.cvs.empty();
@@ -563,7 +568,7 @@ $('save').onclick=async()=>{
   }
   if(queued){pend.push(v);savePend();merge();render();msg(t('queued'))}
   else{msg(t('saved'));crmSync(v.id,v)}
-  resetRows();$('c').value='';delete $('c').dataset.cid;$('stc').innerHTML='';clr('sc');clr('sa');if(!$('cvw').hidden)togCollab();
+  refreshDate();resetRows();$('c').value='';delete $('c').dataset.cid;$('stc').innerHTML='';clr('sc');clr('sa');if(!$('cvw').hidden)togCollab();
   $('save').disabled=false;
 };
 async function flush(){
