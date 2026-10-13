@@ -45,6 +45,14 @@ button.p{background:var(--ac);color:var(--onac);width:100%;font-size:16px;margin
 #msg{color:var(--ac);font-size:14px;min-height:18px;margin-top:8px}
 .langbar{display:flex;justify-content:flex-end;gap:6px;margin:0 0 4px}.lg{padding:4px 12px;font-size:12px;border-radius:6px}.lg.on{background:var(--ac);color:var(--onac)}
 .hint{margin:0 0 6px}
+.cb{position:relative}.cb .st{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mu);margin-top:4px;min-height:16px}
+.cb .sp{width:12px;height:12px;border:2px solid var(--bd);border-top-color:var(--ac);border-radius:50%;animation:spin .8s linear infinite;flex:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+.cb .sug{border:1px solid var(--bd);border-radius:8px;background:var(--card);margin-top:4px;max-height:220px;overflow-y:auto}
+.cb .sug button{display:block;width:100%;text-align:left;border:0;border-radius:0;border-bottom:1px solid var(--bd);padding:10px 12px;font-size:15px;color:var(--tx);background:transparent}
+.cb .sug button:last-child{border-bottom:0}.cb .sug small{display:block;color:var(--mu);font-size:12px}
+.cb .lk{color:var(--ac)}
+.crm{margin-top:8px;font-size:12px;color:var(--mu);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.crm button{padding:3px 10px;font-size:12px}.crm .okc{color:#2e8b57}.crm .erc{color:#b3261e}
 .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.btns button{flex:1 1 130px}
 .fbk{margin-top:10px;padding:10px;border:1px dashed var(--bd);border-radius:10px}
 .fbk textarea{margin-top:6px}.fbk .stars{margin-top:4px}
@@ -79,7 +87,7 @@ button.p{background:var(--ac);color:var(--onac);width:100%;font-size:16px;margin
   <p class="mu hint" data-i="propHint"></p>
   <div id="props"></div>
   <button type="button" onclick="addRow()" data-i="addProp"></button>
-  <label for="c"><span data-i="client"></span> <span data-i="opt"></span></label><input id="c">
+  <label for="c"><span data-i="client"></span> <span data-i="opt"></span></label><div class="cb" id="cbc"><input id="c" autocomplete="off" autocapitalize="words"><div class="st" id="stc"></div><div class="sug" id="sgc" hidden></div></div>
   <p class="legal" id="legal"></p>
   <p class="legal" id="multiNote"></p>
   <label><span data-i="clientSig"></span> <span data-i="opt"></span></label><canvas id="sc"></canvas>
@@ -135,7 +143,8 @@ es:{
  search:'Buscar por nº de referencia o propiedad',allPeriod:'Todo el periodo',quarters:'Trimestres',monthsL:'Meses',qLabel:(q,y)=>'T'+q+' '+y,
  months:['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'],allAgents:'Todos los agentes',
  selAll:'Seleccionar todas',cnt:n=>n+' hojas',cntF:(a,b)=>a+' de '+b+' hojas',empty:'Aún no hay visitas.',noMatch:'No hay visitas que coincidan con la búsqueda.',
- propL:'Propiedad',ownerL:'Propietario',collabL:'Colaborador',clientL:'Cliente',agentL:'Agente',pendTag:'pendiente de enviar',dlPdf:'Descargar PDF',shPdf:'Compartir PDF',shUnsupported:'Este dispositivo no permite compartir el PDF desde aquí; se ha descargado.',del:'Eliminar',
+ propL:'Propiedad',ownerL:'Propietario',collabL:'Colaborador',clientL:'Cliente',agentL:'Agente',pendTag:'pendiente de enviar',dlPdf:'Descargar PDF',shPdf:'Compartir PDF',searching:'Buscando en el CRM…',noResults:'Sin resultados en el CRM. Puedes escribirlo a mano.',cbError:'No se pudo consultar el CRM. Puedes escribirlo a mano.',cbOffline:'Sin conexión: escríbelo a mano.',linked:'Vinculada al CRM',linkedC:'Cliente vinculado al CRM',
+ crmOk:n=>'CRM: evento '+(n?'#'+n:'creado'),crmSyncing:'CRM: enviando…',crmErr:m=>'CRM: error. '+m,crmSkip:'CRM: sin propiedad vinculada',crmWait:'CRM: pendiente de enviar',crmRetry:'Reintentar',crmBusy:'CRM: ya se está enviando…',shUnsupported:'Este dispositivo no permite compartir el PDF desde aquí; se ha descargado.',del:'Eliminar',
  delConfirm:'¿Eliminar esta visita?',delFail:c=>'No se pudo eliminar ('+c+').',clientUnsigned:'Firma cliente: sin firmar',
  fbTitle:'Valoración y feedback',fbPh:'Comentarios del cliente sobre la propiedad (opcional)',fbSave:'Guardar valoración y feedback',unsaved:'Cambios sin guardar',fbSaved:'Guardado',
  savedLocal:'Guardado en el dispositivo; se enviará con la visita.',needOnline:'Necesitas conexión para guardar los cambios.',fbDenied:'No tienes permiso para editar esta visita.',fbFail:c=>'No se pudo guardar ('+c+').',
@@ -171,7 +180,8 @@ en:{
  search:'Search by reference no. or property',allPeriod:'All time',quarters:'Quarters',monthsL:'Months',qLabel:(q,y)=>'Q'+q+' '+y,
  months:['January','February','March','April','May','June','July','August','September','October','November','December'],allAgents:'All agents',
  selAll:'Select all',cnt:n=>n+' sheets',cntF:(a,b)=>a+' of '+b+' sheets',empty:'No viewings yet.',noMatch:'No viewings match your search.',
- propL:'Property',ownerL:'Owner',collabL:'Collaborator',clientL:'Client',agentL:'Agent',pendTag:'waiting to be sent',dlPdf:'Download PDF',shPdf:'Share PDF',shUnsupported:'This device cannot share the PDF from here; it has been downloaded instead.',del:'Delete',
+ propL:'Property',ownerL:'Owner',collabL:'Collaborator',clientL:'Client',agentL:'Agent',pendTag:'waiting to be sent',dlPdf:'Download PDF',shPdf:'Share PDF',searching:'Searching the CRM…',noResults:'No results in the CRM. You can type it manually.',cbError:'Could not reach the CRM. You can type it manually.',cbOffline:'No connection: type it manually.',linked:'Linked to the CRM',linkedC:'Client linked to the CRM',
+ crmOk:n=>'CRM: event '+(n?'#'+n:'created'),crmSyncing:'CRM: sending…',crmErr:m=>'CRM error: '+m,crmSkip:'CRM: no linked property',crmWait:'CRM: waiting to be sent',crmRetry:'Retry',crmBusy:'CRM: already sending…',shUnsupported:'This device cannot share the PDF from here; it has been downloaded instead.',del:'Delete',
  delConfirm:'Delete this viewing?',delFail:c=>'Could not delete ('+c+').',clientUnsigned:'Client signature: not signed',
  fbTitle:'Rating and feedback',fbPh:'Client comments about the property (optional)',fbSave:'Save rating and feedback',unsaved:'Unsaved changes',fbSaved:'Saved',
  savedLocal:'Saved on the device; it will be sent with the viewing.',needOnline:'You need a connection to save changes.',fbDenied:'You do not have permission to edit this viewing.',fbFail:c=>'Could not save ('+c+').',
@@ -217,19 +227,65 @@ function getProps(v){return Array.isArray(v.props)&&v.props.length?v.props:[{ref
 const lg=v=>v&&v.lang==='en'?'en':'es';
 const phraseOf=v=>T(getProps(v).length>1?'frN':'fr1',lg(v));
 /* ===== Filas de propiedades ===== */
-let rowSeq=0,rows=[];
+/* ===== Respacio CRM (through Firebase functions) ===== */
+const FN_BASE='https://europe-west1-hoja-de-visitas.cloudfunctions.net/';
+async function fnCall(name,data,signal){
+  if(!me)throw new Error('auth');
+  const tk=await me.getIdToken();
+  const res=await fetch(FN_BASE+name,{method:'POST',signal,headers:{'Content-Type':'application/json','Authorization':'Bearer '+tk},body:JSON.stringify({data})});
+  let j=null;try{j=await res.json()}catch(e){}
+  if(!res.ok||!j||j.error)throw new Error((j&&j.error&&j.error.status)||('http'+res.status));
+  return j.result;
+}
+/* Generic ajax dropdown: input + loader below + list of suggestions */
+function combo(o){
+  // o: {input, status, list, fn, render(item)->{title,sub}, onPick(item), onEdit(), minChars}
+  const inp=$(o.input),st=$(o.status),sg=$(o.list);let seq=0,timer=null,ctl=null,items=[];
+  const close=()=>{sg.hidden=true;sg.innerHTML=''};
+  const say=(txt,spin)=>{st.innerHTML=spin?'<span class="sp"></span>':'';if(txt){const s=document.createElement('span');s.textContent=txt;st.appendChild(s)}};
+  async function run(q){
+    const my=++seq;if(ctl)ctl.abort();ctl=new AbortController();
+    if(!navigator.onLine){say(t('cbOffline'),false);close();return}
+    say(t('searching'),true);
+    try{
+      const r=await fnCall(o.fn,{q},ctl.signal);
+      if(my!==seq)return;
+      items=(r&&r.items)||[];
+      if(!items.length){say(t('noResults'),false);close();return}
+      say('',false);
+      sg.innerHTML='';
+      items.forEach((it,i)=>{const b=document.createElement('button'),r=o.render(it);b.type='button';b.innerHTML=esc(r.title)+(r.sub?'<small>'+esc(r.sub)+'</small>':'');
+        b.addEventListener('pointerdown',e=>e.preventDefault());
+        b.addEventListener('click',()=>{close();say('',false);o.onPick(it)});sg.appendChild(b)});
+      sg.hidden=false;
+    }catch(e){if(my!==seq||(e&&e.name==='AbortError'))return;say(t('cbError'),false);close()}
+  }
+  inp.addEventListener('input',()=>{
+    o.onEdit();clearTimeout(timer);const q=inp.value.trim();
+    if(q.length<(o.minChars||2)){seq++;if(ctl)ctl.abort();say('',false);close();return}
+    timer=setTimeout(()=>run(q),350);
+  });
+  inp.addEventListener('blur',()=>setTimeout(close,200));
+  return{reset(){seq++;clearTimeout(timer);if(ctl)ctl.abort();say('',false);close()},say};
+}
+let rowSeq=0,rows=[];const rowCombo={};
 function renumber(){rows.forEach((n,i)=>{document.querySelector('#pr'+n+' .pn').textContent=i+1;document.querySelector('#pr'+n+' .rm').hidden=rows.length<2});$('multiNote').innerHTML='<b>'+esc(t(rows.length>1?'frN':'fr1'))+'</b>'}
 function addRow(){
   const n=++rowSeq,b=document.createElement('div');b.className='prop';b.id='pr'+n;
   b.innerHTML=`<div class="row"><b class="mu"><span data-i="prop"></span> <span class="pn"></span></b><button type="button" class="rm" onclick="rmRow(${n})" data-i="remove"></button></div>
-  <label for="r${n}" data-i="ref"></label><input id="r${n}" autocomplete="off">
+  <label for="r${n}" data-i="ref"></label><div class="cb" id="cb${n}r"><input id="r${n}" autocomplete="off" inputmode="search"><div class="st" id="st${n}"></div><div class="sug" id="sg${n}" hidden></div></div>
   <label for="p${n}" data-i="propName"></label><input id="p${n}" autocomplete="off">
   <div class="btns"><button type="button" id="ob${n}" onclick="togSig(${n},'o')"></button><button type="button" id="cb${n}" onclick="togSig(${n},'c')"></button></div>
   <div id="ow${n}" hidden><label for="on${n}" data-i="ownerName"></label><input id="on${n}" autocomplete="off"><label data-i="ownerSig"></label><canvas id="os${n}"></canvas><button type="button" onclick="pads.os${n}.clear()" style="margin-top:6px" data-i="clearSig"></button></div>
   <div id="cw${n}" hidden><label for="cn${n}" data-i="collabName"></label><input id="cn${n}" autocomplete="off"><label data-i="collabSig"></label><canvas id="cs${n}"></canvas><button type="button" onclick="pads.cs${n}.clear()" style="margin-top:6px" data-i="clearSig"></button></div>`;
   $('props').appendChild(b);pad('os'+n);pad('cs'+n);rows.push(n);tr(b);sigBtn(n,'o');sigBtn(n,'c');renumber();
+  rowCombo[n]=combo({input:'r'+n,status:'st'+n,list:'sg'+n,fn:'searchProperties',
+    render:it=>({title:it.reference_no+(it.title?' · '+it.title:'')}),
+    onPick:it=>{$('r'+n).value=it.reference_no;if(it.title)$('p'+n).value=it.title;$('r'+n).dataset.pid=it.id;linkNote(n)},
+    onEdit:()=>{if($('r'+n).dataset.pid){delete $('r'+n).dataset.pid;linkNote(n)}}});
 }
-function rmRow(n){if(rows.length<2)return;$('pr'+n).remove();delete pads['os'+n];delete pads['cs'+n];rows=rows.filter(x=>x!==n);renumber()}
+function linkNote(n){const st=$('st'+n);if($('r'+n).dataset.pid){st.innerHTML='<span class="lk">✓ '+esc(t('linked'))+'</span>'}else st.innerHTML=''}
+function rmRow(n){if(rows.length<2)return;$('pr'+n).remove();delete pads['os'+n];delete pads['cs'+n];delete rowCombo[n];rows=rows.filter(x=>x!==n);renumber()}
 const SG={o:{w:'ow',p:'os',n:'on',b:'ob',add:'ownerAdd',rm:'ownerRm'},c:{w:'cw',p:'cs',n:'cn',b:'cb',add:'collabAdd',rm:'collabRm'}};
 function sigBtn(n,k){const s=SG[k];$(s.b+n).textContent=t($(s.w+n).hidden?s.add:s.rm)}
 function togSig(n,k){
@@ -239,8 +295,12 @@ function togSig(n,k){
 }
 function collabBtn(){$('cvb').textContent=t($('cvw').hidden?'collabAdd':'collabRm')}
 function togCollab(){const w=$('cvw'),open=w.hidden;w.hidden=!open;if(open)pads.cvs.init();else{pads.cvs.clear();$('cvn').value=''}collabBtn()}
-function resetRows(){$('props').innerHTML='';Object.keys(pads).filter(k=>/^(os|cs)\d/.test(k)).forEach(k=>delete pads[k]);rows=[];addRow()}
+function resetRows(){$('props').innerHTML='';Object.keys(rowCombo).forEach(k=>delete rowCombo[k]);Object.keys(pads).filter(k=>/^(os|cs)\d/.test(k)).forEach(k=>delete pads[k]);rows=[];addRow()}
 addRow();
+const clientCombo=combo({input:'c',status:'stc',list:'sgc',fn:'searchContacts',
+  render:it=>({title:it.name,sub:it.reference_no}),
+  onPick:it=>{$('c').value=it.name;$('c').dataset.cid=it.id;$('stc').innerHTML='<span class="lk">✓ '+esc(t('linkedC'))+'</span>'},
+  onEdit:()=>{if($('c').dataset.cid){delete $('c').dataset.cid;$('stc').innerHTML=''}}});
 function clr(id){pads[id].clear()}
 function msg(x){$('msg').textContent=x}
 function esc(s){return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
@@ -391,9 +451,29 @@ async function saveFb(id){
   if(pv){Object.assign(pv,data);savePend();delete fbd[id];fbm[id]=t('savedLocal');merge();deferred=false;draw();return}
   if(!navigator.onLine){fbm[id]=t('needOnline');setFbMsg(id);return}
   fbm[id]=t('saving');setFbMsg(id);
-  try{await wt(db.collection('visits').doc(id).update(data),8000);delete fbd[id];fbm[id]=t('fbSaved');const s=srv.find(x=>x.id===id);if(s)Object.assign(s,data);merge()}
+  try{await wt(db.collection('visits').doc(id).update(data),8000);delete fbd[id];fbm[id]=t('fbSaved');const s=srv.find(x=>x.id===id);if(s)Object.assign(s,data);merge();crmSync(id)}
   catch(e){fbm[id]=(e&&e.code==='permission-denied')?t('fbDenied'):(e&&e.code==='timeout')?t('needOnline'):t('fbFail',(e&&e.code)||'error')}
   deferred=false;draw();
+}
+const crmBusy={};
+async function crmSync(id,vv){
+  const v=vv||visits.find(x=>x.id===id);
+  if(!v||!me||v.agentUid!==me.uid||!getProps(v).some(p=>p.crmPropertyId))return;
+  if(pend.some(p=>p.id===id)||crmBusy[id])return;
+  crmBusy[id]=true;draw();
+  try{await wt(fnCall('syncViewing',{visitId:id}),30000)}catch(e){/* the status is read back from the visit */}
+  finally{delete crmBusy[id];draw()}
+}
+function crmLine(v,own){
+  const linked=getProps(v).some(p=>p.crmPropertyId);
+  if(!linked)return`<div class="crm">${esc(t('crmSkip'))}</div>`;
+  const c=v.crm||{};
+  if(pend.some(p=>p.id===v.id))return`<div class="crm">${esc(t('crmWait'))}</div>`;
+  if(crmBusy[v.id]||c.status==='syncing')return`<div class="crm">${esc(t('crmSyncing'))}</div>`;
+  const retry=own?`<button type="button" onclick="crmSync('${v.id}')">${esc(t('crmRetry'))}</button>`:'';
+  if(c.status==='ok')return`<div class="crm"><span class="okc">✓ ${esc(t('crmOk',c.eventId))}</span>${c.message?` <span>${esc(c.message)}</span>`:''}</div>`;
+  if(c.status==='error')return`<div class="crm"><span class="erc">${esc(t('crmErr',c.message||''))}</span>${retry}</div>`;
+  return`<div class="crm">${esc(t('crmWait'))}${retry}</div>`;
 }
 function render(){updPend();buildPer();buildAg();draw()}
 function draw(){
@@ -421,6 +501,7 @@ function draw(){
   <div><span class="mu">${esc(t('agentL'))}:</span> <b>${esc(nombre(v.agentEmail))}</b></div>
   <div class="sigs">${v.clientSig?`<figure><img src="${v.clientSig}" alt="${esc(t('clientSig'))}"><figcaption>${esc(t('clientSig'))}</figcaption></figure>`:`<div class="mu" style="align-self:center">${esc(t('clientUnsigned'))}</div>`}<figure><img src="${v.agentSig}" alt="${esc(t('agentSig'))}"><figcaption>${esc(t('agentSig'))}</figcaption></figure>${v.collabSig?`<figure><img src="${v.collabSig}" alt="${esc(t('collabSig'))}"><figcaption>${esc(t('collabSig'))}${v.collabName?' · '+esc(v.collabName):''}</figcaption></figure>`:''}</div>
   ${fb}
+  ${crmLine(v,own)}
   <div class="acts"><button onclick="pdf('${v.id}')">${esc(t('dlPdf'))}</button><button onclick="pdf('${v.id}',true)">${esc(t('shPdf'))}</button>${own?`<button onclick="del('${v.id}')">${esc(t('del'))}</button>`:''}</div></div>`}).join('');
   upd();
 }
@@ -440,6 +521,7 @@ $('save').onclick=async()=>{
     const ref=$('r'+n).value.trim(),property=$('p'+n).value.trim(),idx=rows.indexOf(n)+1;
     if(!ref&&!property)return msg(t('needProp',idx,rows.length>1));
     const p={ref,property};
+    const pid=Number($('r'+n).dataset.pid);if(Number.isInteger(pid)&&pid>0)p.crmPropertyId=pid;
     for(const k of ['o','c']){
       const sg=SG[k];if($(sg.w+n).hidden)continue;
       const nm=$(sg.n+n).value.trim(),has=!pads[sg.p+n].empty();
@@ -450,6 +532,7 @@ $('save').onclick=async()=>{
     props.push(p);
   }
   const v={date:$('f').value,client:$('c').value.trim(),props,ref:props[0].ref,property:props[0].property,rating:0,feedback:'',lang:LANG};
+  const cid=Number($('c').dataset.cid);if(v.client&&Number.isInteger(cid)&&cid>0)v.clientId=cid;
   if(!v.date)return msg(t('needDate'));
   if(pads.sa.empty())return msg(t('needAgentSig'));
   if(!$('cvw').hidden){
@@ -469,8 +552,8 @@ $('save').onclick=async()=>{
     }
   }
   if(queued){pend.push(v);savePend();merge();render();msg(t('queued'))}
-  else msg(t('saved'));
-  resetRows();$('c').value='';clr('sc');clr('sa');if(!$('cvw').hidden)togCollab();
+  else{msg(t('saved'));crmSync(v.id,v)}
+  resetRows();$('c').value='';delete $('c').dataset.cid;$('stc').innerHTML='';clr('sc');clr('sa');if(!$('cvw').hidden)togCollab();
   $('save').disabled=false;
 };
 async function flush(){
@@ -480,7 +563,7 @@ async function flush(){
     for(const v of [...pend]){
       if(v.agentUid!==me.uid)continue;
       try{await wt(db.collection('visits').doc(v.id).set(v),15000)}catch(e){break}
-      pend=pend.filter(x=>x.id!==v.id);savePend();merge();render();
+      pend=pend.filter(x=>x.id!==v.id);savePend();merge();render();crmSync(v.id,v);
     }
   }finally{flushing=false}
 }
@@ -552,7 +635,7 @@ function applyLang(){
   tr(document);
   $('legal').innerHTML=esc(t('legal')).replace('www.aepd.es','<a href="https://www.aepd.es" target="_blank" rel="noopener">www.aepd.es</a>')+'<br><b>'+esc(t('legalSign'))+'</b>';
   ['es','en'].forEach(l=>$('lg-'+l).classList.toggle('on',l===LANG));
-  rows.forEach(n=>{sigBtn(n,'o');sigBtn(n,'c')});collabBtn();renumber();
+  rows.forEach(n=>{sigBtn(n,'o');sigBtn(n,'c');linkNote(n)});if($('c').dataset.cid)$('stc').innerHTML='<span class="lk">✓ '+esc(t('linkedC'))+'</span>';collabBtn();renumber();
   if(me){$('who').textContent=me.email+(isSup?t('sup'):'');checkLegacy()}
   render();
 }
