@@ -77,7 +77,7 @@ button.p{background:var(--ac);color:var(--onac);width:100%;font-size:16px;margin
 <div id="app" hidden>
 <div class="row userbar"><span class="mu" id="who"></span><button onclick="logout()" data-i="logout"></button></div>
 <p class="mu" id="net" hidden style="margin:0 0 8px" data-i="offline"></p>
-<div class="card" id="pend" hidden><b id="pendTxt"></b><p class="mu" style="margin:4px 0 0" data-i="pendSub"></p><p id="pendMem" style="margin:6px 0 0;color:#b3261e;font-weight:600" hidden></p><div class="acts"><button onclick="flush()" data-i="sendNow"></button></div></div>
+<div class="card" id="pend" hidden><b id="pendTxt"></b><p class="mu" style="margin:4px 0 0" data-i="pendSub"></p><p id="pendMem" style="margin:6px 0 0;color:#b3261e;font-weight:600" hidden></p><p id="pendErr" style="margin:6px 0 0;color:#b3261e;font-weight:600" hidden></p><div class="acts"><button onclick="flush(true)" data-i="sendNow"></button></div></div>
 <div class="card" id="legacy" hidden><b data-i="legacyT"></b><p class="mu" id="legacyTxt"></p><div class="acts"><button onclick="uploadLegacy()" data-i="legacyUp"></button><button onclick="dropLegacy()" data-i="legacyDrop"></button></div></div>
 <nav class="tabs"><button id="b1" class="on" onclick="tab(1)" data-i="tabNew"></button><button id="b2" onclick="tab(2)" data-i="tabList"></button></nav>
 <section id="t1">
@@ -123,7 +123,7 @@ es:{
  title:'Registro de visitas',fbErr:'No se pudo cargar el sistema de acceso (Firebase). Comprueba la conexión y recarga la página.',
  email:'Correo electrónico',pass:'Contraseña',login:'Entrar',forgot:'¿Has olvidado la contraseña?',logout:'Salir',sup:' · ve todas las visitas',
  offline:'Sin conexión. Puedes registrar visitas: se enviarán solas cuando haya señal.',
- pendN:n=>n+' visita(s) pendiente(s) de enviar',pendSub:'Se enviarán automáticamente al volver la señal. No borres los datos del navegador hasta entonces.',sendNow:'Enviar ahora',pendMem:n=>'⚠ '+n+' visita(s) no están guardadas en el dispositivo. No cierres la app hasta que se envíen.',
+ pendN:n=>n+' visita(s) pendiente(s) de enviar',pendSub:'Se enviarán automáticamente al volver la señal. No borres los datos del navegador hasta entonces.',sendNow:'Enviar ahora',pendErr:(n,c)=>'⚠ '+n+' visita(s) no se han podido enviar ('+c+'). Pulsa «Enviar ahora» para reintentar; si sigue fallando, descarga el PDF y avisa al administrador.',pendMem:n=>'⚠ '+n+' visita(s) no están guardadas en el dispositivo. No cierres la app hasta que se envíen.',
  legacyT:'Visitas guardadas en este dispositivo',legacyN:n=>'Hay '+n+' visita(s) guardada(s) solo en este dispositivo. Al subirlas se asignarán a tu usuario.',legacyUp:'Subir a la nube y borrar del dispositivo',legacyDrop:'Descartar',
  tabNew:'Nueva visita',tabList:'Visitas',
  date:'Fecha',props:'Propiedades visitadas',propHint:'Indica la referencia o el nombre de la propiedad (basta con uno de los dos).',addProp:'+ Añadir otra propiedad',prop:'Propiedad',remove:'Quitar',ref:'Nº referencia',propName:'Nombre de propiedad',
@@ -144,7 +144,7 @@ es:{
  search:'Buscar por nº de referencia o propiedad',allPeriod:'Todo el periodo',quarters:'Trimestres',monthsL:'Meses',qLabel:(q,y)=>'T'+q+' '+y,
  months:['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'],allAgents:'Todos los agentes',
  selAll:'Seleccionar todas',cnt:n=>n+' hojas',cntF:(a,b)=>a+' de '+b+' hojas',empty:'Aún no hay visitas.',noMatch:'No hay visitas que coincidan con la búsqueda.',
- propL:'Propiedad',ownerL:'Propietario',collabL:'Colaborador',clientL:'Cliente',agentL:'Agente',pendTag:'pendiente de enviar',dlPdf:'Descargar PDF',shPdf:'Compartir PDF',searching:'Buscando en el CRM…',noResults:'Sin resultados en el CRM. Puedes escribirlo a mano.',cbError:'No se pudo consultar el CRM. Puedes escribirlo a mano.',cbOffline:'Sin conexión: escríbelo a mano.',linked:'Vinculada al CRM',linkedC:'Cliente vinculado al CRM',
+ propL:'Propiedad',ownerL:'Propietario',collabL:'Colaborador',clientL:'Cliente',agentL:'Agente',pendTag:'pendiente de enviar',errTag:c=>'error al enviar ('+c+')',dlPdf:'Descargar PDF',shPdf:'Compartir PDF',searching:'Buscando en el CRM…',noResults:'Sin resultados en el CRM. Puedes escribirlo a mano.',cbError:'No se pudo consultar el CRM. Puedes escribirlo a mano.',cbOffline:'Sin conexión: escríbelo a mano.',linked:'Vinculada al CRM',linkedC:'Cliente vinculado al CRM',
  crmOk:n=>'CRM: evento '+(n?'#'+n:'creado'),crmSyncing:'CRM: enviando…',crmErr:m=>'CRM: error. '+m,crmSkip:'CRM: sin propiedad vinculada',crmWait:'CRM: pendiente de enviar',crmRetry:'Reintentar',crmBusy:'CRM: ya se está enviando…',shUnsupported:'Este dispositivo no permite compartir el PDF desde aquí; se ha descargado.',del:'Eliminar',
  delConfirm:'¿Eliminar esta visita?',delFail:c=>'No se pudo eliminar ('+c+').',clientUnsigned:'Firma cliente: sin firmar',
  fbTitle:'Valoración y feedback',fbPh:'Comentarios del cliente sobre la propiedad (opcional)',fbSave:'Guardar valoración y feedback',unsaved:'Cambios sin guardar',fbSaved:'Guardado',
@@ -161,7 +161,7 @@ en:{
  title:'Viewing log',fbErr:'Could not load the sign-in system (Firebase). Check your connection and reload the page.',
  email:'Email',pass:'Password',login:'Sign in',forgot:'Forgot your password?',logout:'Log out',sup:' · sees all viewings',
  offline:'No connection. You can still log viewings: they will be sent automatically when you have signal.',
- pendN:n=>n+' viewing(s) waiting to be sent',pendSub:'They will be sent automatically when the signal returns. Do not clear your browser data until then.',sendNow:'Send now',pendMem:n=>'⚠ '+n+' viewing(s) are not saved on this device. Do not close the app until they have been sent.',
+ pendN:n=>n+' viewing(s) waiting to be sent',pendSub:'They will be sent automatically when the signal returns. Do not clear your browser data until then.',sendNow:'Send now',pendErr:(n,c)=>'⚠ '+n+' viewing(s) could not be sent ('+c+'). Press «Send now» to retry; if it keeps failing, download the PDF and contact the administrator.',pendMem:n=>'⚠ '+n+' viewing(s) are not saved on this device. Do not close the app until they have been sent.',
  legacyT:'Viewings saved on this device',legacyN:n=>n+' viewing(s) are saved only on this device. When uploaded, they will be assigned to your user.',legacyUp:'Upload to the cloud and delete from device',legacyDrop:'Discard',
  tabNew:'New viewing',tabList:'Viewings',
  date:'Date',props:'Properties viewed',propHint:'Enter the reference or the property name (either one is enough).',addProp:'+ Add another property',prop:'Property',remove:'Remove',ref:'Reference no.',propName:'Property name',
@@ -182,7 +182,7 @@ en:{
  search:'Search by reference no. or property',allPeriod:'All time',quarters:'Quarters',monthsL:'Months',qLabel:(q,y)=>'Q'+q+' '+y,
  months:['January','February','March','April','May','June','July','August','September','October','November','December'],allAgents:'All agents',
  selAll:'Select all',cnt:n=>n+' sheets',cntF:(a,b)=>a+' of '+b+' sheets',empty:'No viewings yet.',noMatch:'No viewings match your search.',
- propL:'Property',ownerL:'Owner',collabL:'Collaborator',clientL:'Client',agentL:'Agent',pendTag:'waiting to be sent',dlPdf:'Download PDF',shPdf:'Share PDF',searching:'Searching the CRM…',noResults:'No results in the CRM. You can type it manually.',cbError:'Could not reach the CRM. You can type it manually.',cbOffline:'No connection: type it manually.',linked:'Linked to the CRM',linkedC:'Client linked to the CRM',
+ propL:'Property',ownerL:'Owner',collabL:'Collaborator',clientL:'Client',agentL:'Agent',pendTag:'waiting to be sent',errTag:c=>'sending failed ('+c+')',dlPdf:'Download PDF',shPdf:'Share PDF',searching:'Searching the CRM…',noResults:'No results in the CRM. You can type it manually.',cbError:'Could not reach the CRM. You can type it manually.',cbOffline:'No connection: type it manually.',linked:'Linked to the CRM',linkedC:'Client linked to the CRM',
  crmOk:n=>'CRM: event '+(n?'#'+n:'created'),crmSyncing:'CRM: sending…',crmErr:m=>'CRM error: '+m,crmSkip:'CRM: no linked property',crmWait:'CRM: waiting to be sent',crmRetry:'Retry',crmBusy:'CRM: already sending…',shUnsupported:'This device cannot share the PDF from here; it has been downloaded instead.',del:'Delete',
  delConfirm:'Delete this viewing?',delFail:c=>'Could not delete ('+c+').',clientUnsigned:'Client signature: not signed',
  fbTitle:'Rating and feedback',fbPh:'Client comments about the property (optional)',fbSave:'Save rating and feedback',unsaved:'Unsaved changes',fbSaved:'Saved',
@@ -213,6 +213,7 @@ function merge(){const mine=me?pend.filter(p=>p.agentUid===me.uid):[];visits=[..
 function updPend(){
   const n=me?pend.filter(p=>p.agentUid===me.uid).length:0;$('pend').hidden=!n;if(n)$('pendTxt').textContent=t('pendN',n);
   const m=me?memOnly().filter(p=>p.agentUid===me.uid).length:0;$('pendMem').hidden=!m;if(m)$('pendMem').textContent=t('pendMem',m);
+  const er=me?pend.filter(p=>p.agentUid===me.uid&&p.sendErr):[];$('pendErr').hidden=!er.length;if(er.length)$('pendErr').textContent=t('pendErr',er.length,[...new Set(er.map(p=>p.sendErr))].join(', '));
 }
 window.addEventListener('beforeunload',e=>{if(memOnly().length){e.preventDefault();e.returnValue=''}});
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{})}catch(e){}
@@ -519,7 +520,7 @@ function draw(){
     }else if(v.rating||v.feedback){
       fb=`<div class="fbk"><div class="mu">${esc(t('fbTitle'))}</div><div class="stars ro">${[1,2,3,4,5].map(n=>`<span class="${n<=(v.rating||0)?'on':''}">★</span>`).join('')}</div>${v.feedback?`<div>${esc(v.feedback)}</div>`:''}</div>`;
     }
-    return `<div class="v"><div class="row"><label class="chk"><input type="checkbox" ${sel.has(v.id)?'checked':''} onchange="toggle('${v.id}',this.checked)"><b>${head}</b>${pend.some(p=>p.id===v.id)?` <span style="color:#b26a00;font-size:12px">· ${esc(t('pendTag'))}</span>`:''}</label><span class="mu">${fmt(v.date)}</span></div>
+    return `<div class="v"><div class="row"><label class="chk"><input type="checkbox" ${sel.has(v.id)?'checked':''} onchange="toggle('${v.id}',this.checked)"><b>${head}</b>${pend.some(p=>p.id===v.id)?(v.sendErr?` <span style="color:#b3261e;font-size:12px">· ${esc(t('errTag',v.sendErr))}</span>`:` <span style="color:#b26a00;font-size:12px">· ${esc(t('pendTag'))}</span>`):''}</label><span class="mu">${fmt(v.date)}</span></div>
   ${plist}
   <div style="margin-top:6px"><span class="mu">${esc(t('clientL'))}:</span> <b>${v.client?esc(v.client):'—'}</b></div>
   <div><span class="mu">${esc(t('agentL'))}:</span> <b>${esc(nombre(v.agentEmail))}</b></div>
@@ -581,14 +582,24 @@ $('save').onclick=async()=>{
   refreshDate();resetRows();$('c').value='';delete $('c').dataset.cid;$('stc').innerHTML='';clr('sc');clr('sa');if(!$('cvw').hidden)togCollab();
   $('save').disabled=false;
 };
-async function flush(){
+/* Errores de conexión: se para y se reintenta más tarde. Cualquier otro error marca la visita (sendErr) y se sigue con las demás.
+   Las visitas con error solo se reintentan con «Enviar ahora» (all=true) y una vez al abrir la app o iniciar sesión. */
+const NET_ERR=['timeout','unavailable','deadline-exceeded','unauthenticated'];let errRetried=false;
+async function flush(all){
   if(flushing||!me||!navigator.onLine)return;
+  if(!errRetried){all=true;errRetried=true}
   flushing=true;
   try{
     for(const v of [...pend]){
-      if(v.agentUid!==me.uid)continue;
-      try{await wt(db.collection('visits').doc(v.id).set(v),15000)}catch(e){break}
-      pend=pend.filter(x=>x.id!==v.id);savePend();merge();render();crmSync(v.id,v);
+      if(v.agentUid!==me.uid||(v.sendErr&&all!==true))continue;
+      const {sendErr,...data}=v;
+      try{await wt(db.collection('visits').doc(v.id).set(data),15000)}
+      catch(e){
+        const c=(e&&e.code)||'error';
+        if(NET_ERR.includes(c))break;
+        v.sendErr=c;savePend();merge();render();continue;
+      }
+      pend=pend.filter(x=>x.id!==v.id);savePend();merge();render();crmSync(v.id,data);
     }
   }finally{flushing=false}
 }
@@ -646,7 +657,7 @@ async function start(){
 }
 auth.onAuthStateChanged(u=>{
   if(unsub){unsub();unsub=null}
-  srv=[];visits=[];sel.clear();me=u;isSup=false;
+  srv=[];visits=[];sel.clear();me=u;isSup=false;errRetried=false;
   if(!u){$('q').value='';$('per').value='all';$('ag').value='all';show('auth');return}
   $('who').textContent=u.email;
   show('app');tab(1);checkLegacy();net();merge();render();start();
