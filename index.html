@@ -146,7 +146,7 @@ es:{
  selAll:'Seleccionar todas',cnt:n=>n+' hojas',cntF:(a,b)=>a+' de '+b+' hojas',empty:'Aún no hay visitas.',noMatch:'No hay visitas que coincidan con la búsqueda.',
  propL:'Propiedad',ownerL:'Propietario',collabL:'Colaborador',clientL:'Cliente',agentL:'Agente',pendTag:'pendiente de enviar',errTag:c=>'error al enviar ('+c+')',dlPdf:'Descargar PDF',shPdf:'Compartir PDF',searching:'Buscando en el CRM…',noResults:'Sin resultados en el CRM. Puedes escribirlo a mano.',cbError:'No se pudo consultar el CRM. Puedes escribirlo a mano.',cbOffline:'Sin conexión: escríbelo a mano.',linked:'Vinculada al CRM',linkedC:'Cliente vinculado al CRM',
  crmOk:n=>'CRM: evento '+(n?'#'+n:'creado'),crmSyncing:'CRM: enviando…',crmErr:m=>'CRM: error. '+m,crmSkip:'CRM: sin propiedad vinculada',crmWait:'CRM: pendiente de enviar',crmRetry:'Reintentar',crmBusy:'CRM: ya se está enviando…',shUnsupported:'Este dispositivo no permite compartir el PDF desde aquí; se ha descargado.',del:'Eliminar',
- delConfirm:'¿Eliminar esta visita?',delFail:c=>'No se pudo eliminar ('+c+').',clientUnsigned:'Firma cliente: sin firmar',
+ delConfirm:'¿Eliminar esta visita?',delFail:c=>'No se pudo eliminar ('+c+').',clientUnsigned:'Firma cliente: sin firmar',sigBad:c=>c+': no válida',
  fbTitle:'Valoración y feedback',fbPh:'Comentarios del cliente sobre la propiedad (opcional)',fbSave:'Guardar valoración y feedback',unsaved:'Cambios sin guardar',fbSaved:'Guardado',
  savedLocal:'Guardado en el dispositivo; se enviará con la visita.',savedMem:'No hay espacio en el dispositivo: se enviará con la visita si no cierras la app.',needOnline:'Necesitas conexión para guardar los cambios.',fbDenied:'No tienes permiso para editar esta visita.',fbFail:c=>'No se pudo guardar ('+c+').',
  noPdf:'No hay visitas que descargar.',pdfLoad:'No se pudo cargar el generador de PDF.',pdfErr:'Error al generar el PDF.',
@@ -184,7 +184,7 @@ en:{
  selAll:'Select all',cnt:n=>n+' sheets',cntF:(a,b)=>a+' of '+b+' sheets',empty:'No viewings yet.',noMatch:'No viewings match your search.',
  propL:'Property',ownerL:'Owner',collabL:'Collaborator',clientL:'Client',agentL:'Agent',pendTag:'waiting to be sent',errTag:c=>'sending failed ('+c+')',dlPdf:'Download PDF',shPdf:'Share PDF',searching:'Searching the CRM…',noResults:'No results in the CRM. You can type it manually.',cbError:'Could not reach the CRM. You can type it manually.',cbOffline:'No connection: type it manually.',linked:'Linked to the CRM',linkedC:'Client linked to the CRM',
  crmOk:n=>'CRM: event '+(n?'#'+n:'created'),crmSyncing:'CRM: sending…',crmErr:m=>'CRM error: '+m,crmSkip:'CRM: no linked property',crmWait:'CRM: waiting to be sent',crmRetry:'Retry',crmBusy:'CRM: already sending…',shUnsupported:'This device cannot share the PDF from here; it has been downloaded instead.',del:'Delete',
- delConfirm:'Delete this viewing?',delFail:c=>'Could not delete ('+c+').',clientUnsigned:'Client signature: not signed',
+ delConfirm:'Delete this viewing?',delFail:c=>'Could not delete ('+c+').',clientUnsigned:'Client signature: not signed',sigBad:c=>c+': invalid',
  fbTitle:'Rating and feedback',fbPh:'Client comments about the property (optional)',fbSave:'Save rating and feedback',unsaved:'Unsaved changes',fbSaved:'Saved',
  savedLocal:'Saved on the device; it will be sent with the viewing.',savedMem:'No space left on the device: it will be sent with the viewing if you do not close the app.',needOnline:'You need a connection to save changes.',fbDenied:'You do not have permission to edit this viewing.',fbFail:c=>'Could not save ('+c+').',
  noPdf:'There are no viewings to download.',pdfLoad:'Could not load the PDF generator.',pdfErr:'Error generating the PDF.',
@@ -328,7 +328,11 @@ const clientCombo=combo({input:'c',status:'stc',list:'sgc',fn:'searchContacts',
   onEdit:()=>{if($('c').dataset.cid){delete $('c').dataset.cid;$('stc').innerHTML=''}}});
 function clr(id){pads[id].clear()}
 function msg(x){$('msg').textContent=x}
-function esc(s){return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+/* Solo se aceptan firmas que sean PNG en base64 (las que genera el lienzo); cualquier otra cosa no se muestra ni se incrusta en el PDF */
+const SIG_RE=/^data:image\/png;base64,[A-Za-z0-9+/=]+$/;
+const sigOk=s=>typeof s==='string'&&SIG_RE.test(s);
+const sigFig=(sig,cap,extra)=>sigOk(sig)?`<figure><img src="${sig}" alt="${esc(cap)}"><figcaption>${esc(cap)}${extra||''}</figcaption></figure>`:`<div class="mu" style="align-self:center">${esc(t('sigBad',cap))}</div>`;
 function tab(n){$('t1').hidden=n!==1;$('t2').hidden=n!==2;$('b1').classList.toggle('on',n===1);$('b2').classList.toggle('on',n===2);if(n===1){refreshDate();Object.values(pads).forEach(p=>p.init())}}
 const fmt=d=>d.split('-').reverse().join('/');
 const sorted=()=>[...visits].sort((a,b)=>b.date.localeCompare(a.date)||b.created-a.created);
@@ -339,8 +343,8 @@ function buildPer(){
   const ms=[...new Set(visits.map(v=>v.date.slice(0,7)))].sort().reverse();
   const qs=[...new Set(visits.map(v=>qOf(v.date)))].sort().reverse();
   el.innerHTML=`<option value="all">${esc(t('allPeriod'))}</option>`
-    +(qs.length?`<optgroup label="${esc(t('quarters'))}">`+qs.map(q=>`<option value="${q}">${esc(t('qLabel',q.slice(-1),q.slice(0,4)))}</option>`).join('')+'</optgroup>':'')
-    +(ms.length?`<optgroup label="${esc(t('monthsL'))}">`+ms.map(m=>`<option value="${m}">${esc(M[+m.slice(5)-1])} ${m.slice(0,4)}</option>`).join('')+'</optgroup>':'');
+    +(qs.length?`<optgroup label="${esc(t('quarters'))}">`+qs.map(q=>`<option value="${esc(q)}">${esc(t('qLabel',q.slice(-1),q.slice(0,4)))}</option>`).join('')+'</optgroup>':'')
+    +(ms.length?`<optgroup label="${esc(t('monthsL'))}">`+ms.map(m=>`<option value="${esc(m)}">${esc((M[+m.slice(5)-1]||'')+' '+m.slice(0,4))}</option>`).join('')+'</optgroup>':'');
   el.value=[...el.options].some(o=>o.value===cur)?cur:'all';
 }
 function buildAg(){
@@ -418,7 +422,7 @@ async function pdf(id,share){
             const x=20+i*90;let yy=y0;
             d.setFontSize(9);d.setFont(undefined,'normal');d.text(d.splitTextToSize(o.a+' '+(o.n||''),82)[0],x,yy);yy+=5;
             d.setFontSize(7.5);d.setTextColor(120);d.text(o.b,x,yy);d.setTextColor(0);yy+=1.5;
-            try{d.addImage(o.s,'PNG',x,yy,50,16.7)}catch(e){}
+            if(sigOk(o.s)){try{d.addImage(o.s,'PNG',x,yy,50,16.7)}catch(e){}}
             yy+=17.5;d.setDrawColor(150);d.setLineWidth(0.2);d.line(x,yy,x+55,yy);
           });
           y=y0+27;
@@ -433,9 +437,9 @@ async function pdf(id,share){
       d.setFontSize(9);d.setFont(undefined,'bold');d.text(pl,15,y);y+=pl.length*4.6+4;
       const three=!!v.collabSig,cx=three?[15,78,141]:[15,110],iw=three?48:60,ih=iw/3,lw=three?50:75;
       label(P('pClientSig'),cx[0]);label(P('pAgentSig'),cx[1]);if(three)label(P('pCollabSig'),cx[2]);y+=2;
-      if(v.clientSig){try{d.addImage(v.clientSig,'PNG',cx[0],y,iw,ih)}catch(e){}}
-      try{d.addImage(v.agentSig,'PNG',cx[1],y,iw,ih)}catch(e){}
-      if(three){try{d.addImage(v.collabSig,'PNG',cx[2],y,iw,ih)}catch(e){}}
+      if(sigOk(v.clientSig)){try{d.addImage(v.clientSig,'PNG',cx[0],y,iw,ih)}catch(e){}}
+      if(sigOk(v.agentSig)){try{d.addImage(v.agentSig,'PNG',cx[1],y,iw,ih)}catch(e){}}
+      if(three&&sigOk(v.collabSig)){try{d.addImage(v.collabSig,'PNG',cx[2],y,iw,ih)}catch(e){}}
       y+=21;d.setDrawColor(150);d.setLineWidth(0.2);cx.forEach(x=>d.line(x,y,x+lw,y));y+=4.5;
       d.setFontSize(8);d.setFont(undefined,'normal');d.text(String(v.client||''),cx[0],y);d.text(nombre(v.agentEmail),cx[1],y);if(three)d.text(d.splitTextToSize(String(v.collabName||''),55)[0],cx[2],y);y+=7;
       if(vi<list.length-1){y+=3;d.setDrawColor(120);d.setLineWidth(0.6);d.line(15,y,195,y);d.setLineWidth(0.2);y+=10}
@@ -465,7 +469,7 @@ function setFbMsg(id){const e=$('fbm-'+id);if(e)e.textContent=fbm[id]||(fbd[id]?
 function setStar(id,n){
   const v=visits.find(x=>x.id===id);if(!v)return;const c=cur(v);
   fbd[id]={rating:c.rating===n?0:n,feedback:c.feedback};fbm[id]='';
-  document.querySelectorAll('[data-st="'+id+'"] button').forEach((b,i)=>b.classList.toggle('on',i<fbd[id].rating));setFbMsg(id);
+  document.querySelectorAll('[data-st="'+CSS.escape(id)+'"] button').forEach((b,i)=>b.classList.toggle('on',i<fbd[id].rating));setFbMsg(id);
 }
 function fbInput(id,val){const v=visits.find(x=>x.id===id);if(!v)return;fbd[id]={rating:cur(v).rating,feedback:val};fbm[id]='';setFbMsg(id)}
 async function saveFb(id){
@@ -495,7 +499,7 @@ function crmLine(v,own){
   const c=v.crm||{};
   if(pend.some(p=>p.id===v.id))return`<div class="crm">${esc(t('crmWait'))}</div>`;
   if(crmBusy[v.id]||c.status==='syncing')return`<div class="crm">${esc(t('crmSyncing'))}</div>`;
-  const retry=own?`<button type="button" onclick="crmSync('${v.id}')">${esc(t('crmRetry'))}</button>`:'';
+  const retry=own?`<button type="button" data-act="crm" data-id="${esc(v.id)}">${esc(t('crmRetry'))}</button>`:'';
   if(c.status==='ok')return`<div class="crm"><span class="okc">✓ ${esc(t('crmOk',c.eventId))}</span>${c.message?` <span>${esc(c.message)}</span>`:''}</div>`;
   if(c.status==='error')return`<div class="crm"><span class="erc">${esc(t('crmErr',c.message||''))}</span>${retry}</div>`;
   return`<div class="crm">${esc(t('crmWait'))}${retry}</div>`;
@@ -509,27 +513,37 @@ function draw(){
   if(!f.length){$('list').innerHTML='<span class="mu">'+esc(t(visits.length?'noMatch':'empty'))+'</span>';upd();return}
   $('list').innerHTML=f.map(v=>{
     const ps=getProps(v),multi=ps.length>1,own=!!(me&&v.agentUid===me.uid),c=cur(v);
-    const sg=(nm,sig,lab,cap)=>sig?`<div class="mu">${esc(t(lab))}: <b>${esc(nm||'')}</b></div><div class="sigs"><figure><img src="${sig}" alt="${esc(t(cap))}"><figcaption>${esc(t(cap))}</figcaption></figure></div>`:'';
+    const sg=(nm,sig,lab,cap)=>sig?`<div class="mu">${esc(t(lab))}: <b>${esc(nm||'')}</b></div><div class="sigs">${sigFig(sig,t(cap))}</div>`:'';
     const plist=ps.map((p,k)=>`<div style="margin-top:6px"><span class="mu">${esc(t('propL'))}${multi?' '+(k+1):''}:</span> <b>${esc(p.property||p.ref||'—')}</b>${multi&&p.property&&p.ref?` <span class="mu">(Ref. ${esc(p.ref)})</span>`:''}${sg(p.ownerName,p.ownerSig,'ownerL','ownerSig')}${sg(p.collabName,p.collabSig,'collabL','collabSig')}</div>`).join('');
     const refs=ps.map(p=>p.ref).filter(Boolean),head=refs.length?'Ref. '+refs.map(esc).join(' · '):ps.map(p=>esc(p.property||'—')).join(' · ');
     let fb='';
     if(own){
-      fb=`<div class="fbk"><div class="mu">${esc(t('fbTitle'))}</div><div class="stars" data-st="${v.id}">${[1,2,3,4,5].map(n=>`<button type="button" class="${n<=c.rating?'on':''}" onclick="setStar('${v.id}',${n})" aria-label="${esc(t('star',n))}">★</button>`).join('')}</div>
-      <textarea class="fbt" rows="3" placeholder="${esc(t('fbPh'))}" oninput="fbInput('${v.id}',this.value)">${esc(c.feedback)}</textarea>
-      <div class="row" style="margin-top:6px;gap:8px"><button type="button" onclick="saveFb('${v.id}')">${esc(t('fbSave'))}</button><span class="mu" id="fbm-${v.id}">${esc(fbm[v.id]||(fbd[v.id]?t('unsaved'):''))}</span></div></div>`;
+      fb=`<div class="fbk"><div class="mu">${esc(t('fbTitle'))}</div><div class="stars" data-st="${esc(v.id)}">${[1,2,3,4,5].map(n=>`<button type="button" class="${n<=c.rating?'on':''}" data-act="star" data-id="${esc(v.id)}" data-n="${n}" aria-label="${esc(t('star',n))}">★</button>`).join('')}</div>
+      <textarea class="fbt" rows="3" placeholder="${esc(t('fbPh'))}" data-id="${esc(v.id)}">${esc(c.feedback)}</textarea>
+      <div class="row" style="margin-top:6px;gap:8px"><button type="button" data-act="fb" data-id="${esc(v.id)}">${esc(t('fbSave'))}</button><span class="mu" id="fbm-${esc(v.id)}">${esc(fbm[v.id]||(fbd[v.id]?t('unsaved'):''))}</span></div></div>`;
     }else if(v.rating||v.feedback){
       fb=`<div class="fbk"><div class="mu">${esc(t('fbTitle'))}</div><div class="stars ro">${[1,2,3,4,5].map(n=>`<span class="${n<=(v.rating||0)?'on':''}">★</span>`).join('')}</div>${v.feedback?`<div>${esc(v.feedback)}</div>`:''}</div>`;
     }
-    return `<div class="v"><div class="row"><label class="chk"><input type="checkbox" ${sel.has(v.id)?'checked':''} onchange="toggle('${v.id}',this.checked)"><b>${head}</b>${pend.some(p=>p.id===v.id)?(v.sendErr?` <span style="color:#b3261e;font-size:12px">· ${esc(t('errTag',v.sendErr))}</span>`:` <span style="color:#b26a00;font-size:12px">· ${esc(t('pendTag'))}</span>`):''}</label><span class="mu">${fmt(v.date)}</span></div>
+    return `<div class="v"><div class="row"><label class="chk"><input type="checkbox" class="selv" data-id="${esc(v.id)}" ${sel.has(v.id)?'checked':''}><b>${head}</b>${pend.some(p=>p.id===v.id)?(v.sendErr?` <span style="color:#b3261e;font-size:12px">· ${esc(t('errTag',v.sendErr))}</span>`:` <span style="color:#b26a00;font-size:12px">· ${esc(t('pendTag'))}</span>`):''}</label><span class="mu">${esc(fmt(v.date))}</span></div>
   ${plist}
   <div style="margin-top:6px"><span class="mu">${esc(t('clientL'))}:</span> <b>${v.client?esc(v.client):'—'}</b></div>
   <div><span class="mu">${esc(t('agentL'))}:</span> <b>${esc(nombre(v.agentEmail))}</b></div>
-  <div class="sigs">${v.clientSig?`<figure><img src="${v.clientSig}" alt="${esc(t('clientSig'))}"><figcaption>${esc(t('clientSig'))}</figcaption></figure>`:`<div class="mu" style="align-self:center">${esc(t('clientUnsigned'))}</div>`}<figure><img src="${v.agentSig}" alt="${esc(t('agentSig'))}"><figcaption>${esc(t('agentSig'))}</figcaption></figure>${v.collabSig?`<figure><img src="${v.collabSig}" alt="${esc(t('collabSig'))}"><figcaption>${esc(t('collabSig'))}${v.collabName?' · '+esc(v.collabName):''}</figcaption></figure>`:''}</div>
+  <div class="sigs">${v.clientSig?sigFig(v.clientSig,t('clientSig')):`<div class="mu" style="align-self:center">${esc(t('clientUnsigned'))}</div>`}${sigFig(v.agentSig,t('agentSig'))}${v.collabSig?sigFig(v.collabSig,t('collabSig'),v.collabName?' · '+esc(v.collabName):''):''}</div>
   ${fb}
   ${crmLine(v,own)}
-  <div class="acts"><button onclick="pdf('${v.id}')">${esc(t('dlPdf'))}</button><button onclick="pdf('${v.id}',true)">${esc(t('shPdf'))}</button>${own?`<button onclick="del('${v.id}')">${esc(t('del'))}</button>`:''}</div></div>`}).join('');
+  <div class="acts"><button data-act="pdf" data-id="${esc(v.id)}">${esc(t('dlPdf'))}</button><button data-act="share" data-id="${esc(v.id)}">${esc(t('shPdf'))}</button>${own?`<button data-act="del" data-id="${esc(v.id)}">${esc(t('del'))}</button>`:''}</div></div>`}).join('');
   upd();
 }
+/* Acciones de la lista por delegación: el id viaja en data-id (texto), nunca dentro de un onclick */
+$('list').addEventListener('click',e=>{
+  const b=e.target.closest('[data-act]');if(!b||!$('list').contains(b))return;const id=b.dataset.id;
+  switch(b.dataset.act){
+    case 'pdf':pdf(id);break;case 'share':pdf(id,true);break;case 'del':del(id);break;
+    case 'fb':saveFb(id);break;case 'crm':crmSync(id);break;case 'star':setStar(id,+b.dataset.n);break;
+  }
+});
+$('list').addEventListener('change',e=>{if(e.target.classList.contains('selv'))toggle(e.target.dataset.id,e.target.checked)});
+$('list').addEventListener('input',e=>{if(e.target.classList.contains('fbt'))fbInput(e.target.dataset.id,e.target.value)});
 $('list').addEventListener('focusout',e=>{
   if(e.target.classList&&e.target.classList.contains('fbt'))setTimeout(()=>{if(deferred&&!$('list').contains(document.activeElement)){deferred=false;draw()}},600);
 });
@@ -652,7 +666,7 @@ async function start(){
   if(me!==u)return;
   isSup=sup;$('who').textContent=u.email+(isSup?t('sup'):'');
   const col=db.collection('visits'),qy=isSup?col:col.where('agentUid','==',u.uid);
-  unsub=qy.onSnapshot(s=>{srv=s.docs.map(d=>d.data());merge();render()},e=>{$('msg2').textContent=t('loadFail',e.code||'error')});
+  unsub=qy.onSnapshot(s=>{srv=s.docs.map(d=>({...d.data(),id:d.id}));merge();render()},e=>{$('msg2').textContent=t('loadFail',e.code||'error')});
   render();flush();
 }
 auth.onAuthStateChanged(u=>{
