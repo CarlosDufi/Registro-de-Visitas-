@@ -1,0 +1,63 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function myEmail() { return request.auth.token.email.lower(); }
+    function isSupervisor() {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/supervisores/$(myEmail()));
+    }
+    // Firma válida: PNG en base64 (lo que genera la app)
+    function isSig(s) {
+      return s is string && s.size() < 200000
+        && s.matches('data:image/png;base64,[A-Za-z0-9+/=]+');
+    }
+    function optSig(d, k) { return !(k in d) || d[k] == '' || isSig(d[k]); }
+    function okProp(p) {
+      return p is map
+        && (!('ownerSig' in p) || isSig(p.ownerSig))
+        && (!('collabSig' in p) || isSig(p.collabSig));
+    }
+    // Hasta 10 propiedades por visita (las reglas no permiten recorrer listas)
+    function okProps(ps) {
+      return ps is list && ps.size() >= 1 && ps.size() <= 10
+        && okProp(ps[0])
+        && (ps.size() < 2 || okProp(ps[1]))
+        && (ps.size() < 3 || okProp(ps[2]))
+        && (ps.size() < 4 || okProp(ps[3]))
+        && (ps.size() < 5 || okProp(ps[4]))
+        && (ps.size() < 6 || okProp(ps[5]))
+        && (ps.size() < 7 || okProp(ps[6]))
+        && (ps.size() < 8 || okProp(ps[7]))
+        && (ps.size() < 9 || okProp(ps[8]))
+        && (ps.size() < 10 || okProp(ps[9]));
+    }
+    match /supervisores/{email} {
+      allow read: if signedIn() && myEmail() == email;
+      allow write: if false;
+    }
+    match /visits/{id} {
+      allow read: if signedIn() && (resource.data.agentUid == request.auth.uid || isSupervisor());
+      // The "crm" field is written only by the Firebase function, never by the app.
+      allow create: if signedIn()
+        && request.resource.data.agentUid == request.auth.uid
+        && request.resource.data.agentEmail == myEmail()
+        && request.resource.data.id == id
+        && !('crm' in request.resource.data)
+        && request.resource.data.date is string
+        && request.resource.data.date.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
+        && isSig(request.resource.data.agentSig)
+        && optSig(request.resource.data, 'clientSig')
+        && optSig(request.resource.data, 'collabSig')
+        && (!('props' in request.resource.data) || okProps(request.resource.data.props));
+      allow delete: if signedIn() && resource.data.agentUid == request.auth.uid;
+      allow update: if signedIn()
+        && resource.data.agentUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rating','feedback'])
+        && request.resource.data.rating is int
+        && request.resource.data.rating >= 0 && request.resource.data.rating <= 5
+        && request.resource.data.feedback is string
+        && request.resource.data.feedback.size() <= 2000;
+    }
+  }
+}
