@@ -249,7 +249,18 @@ function pad(id){
   c.addEventListener('pointermove',e=>{if(!d)return;const p=pos(e),q=st[st.length-1];ink+=Math.hypot(p[0]-q[0]*w,p[1]-q[1]*h);st.push([p[0]/w,p[1]/h]);x.lineTo(...p);x.stroke()});
   ['pointerup','pointercancel'].forEach(t=>c.addEventListener(t,()=>d=false));
   pads[id]={init:size,clear(){strokes=[];st=null;ink=0;d=false;redraw()},empty:()=>ink<MIN_INK,off(){if(padRO)padRO.unobserve(c)},
-    data(){const t=document.createElement('canvas');t.width=300;t.height=100;t.getContext('2d').drawImage(c,0,0,300,100);return t.toDataURL('image/png')}};
+    /* Imagen de 300x100: se recorta al trazo y se encaja sin deformar (centrada, fondo transparente), redibujando los trazos */
+    data(){
+      const OW=300,OH=100,M=6,t=document.createElement('canvas');t.width=OW;t.height=OH;const o=t.getContext('2d');
+      let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+      strokes.forEach(s=>s.forEach(([u,v])=>{const X=u*w,Y=v*h;if(X<x0)x0=X;if(X>x1)x1=X;if(Y<y0)y0=Y;if(Y>y1)y1=Y}));
+      if(!w||x0===Infinity)return t.toDataURL('image/png');
+      const bw=Math.max(x1-x0,1),bh=Math.max(y1-y0,1),k=Math.min((OW-2*M)/bw,(OH-2*M)/bh);
+      const ox=(OW-bw*k)/2-x0*k,oy=(OH-bh*k)/2-y0*k,P=([u,v])=>[u*w*k+ox,v*h*k+oy];
+      o.lineWidth=Math.min(3,Math.max(1.5,2*k));o.lineCap='round';o.lineJoin='round';o.strokeStyle='#111';
+      strokes.forEach(s=>{o.beginPath();o.moveTo(...P(s[0]));(s.length>1?s.slice(1):[s[0]]).forEach(q=>o.lineTo(...P(q)));o.stroke()});
+      return t.toDataURL('image/png');
+    }};
 }
 pad('sc');pad('sa');pad('cvs');
 function nombre(e){const l=String(e||'').split('@')[0],f=l.split(/[._\-+0-9]+/).filter(Boolean)[0]||l;return f?f.charAt(0).toUpperCase()+f.slice(1).toLowerCase():'-'}
