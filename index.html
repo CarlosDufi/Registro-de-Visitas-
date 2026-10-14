@@ -225,6 +225,10 @@ try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().
 function net(){$('net').hidden=navigator.onLine}
 firebase.initializeApp({apiKey:"AIzaSyB8g6XsfZKAuJUq7CwuvlgbGIE6tPxsolo",authDomain:"hoja-de-visitas.firebaseapp.com",projectId:"hoja-de-visitas",storageBucket:"hoja-de-visitas.firebasestorage.app",messagingSenderId:"441072354523",appId:"1:441072354523:web:1cb7f7458dd759a7f4b8fe"});
 const auth=firebase.auth();db=firebase.firestore();
+/* Caché sin conexión de Firestore: las visitas ya descargadas se ven sin señal. Si el navegador no la permite
+   (p. ej. modo privado), la app funciona igual que sin ella. Se borra al cerrar sesión. */
+let persist=false;
+try{db.enablePersistence({synchronizeTabs:true}).then(()=>{persist=true}).catch(()=>{})}catch(e){}
 /* Fecha local del dispositivo (no UTC). La fecha propuesta se actualiza sola si no se ha cambiado a mano. */
 const hoy=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 let fAuto=hoy();$('f').value=fAuto;$('f').max=fAuto;
@@ -709,10 +713,13 @@ $('forgot').onclick=async()=>{
   try{await auth.sendPasswordResetEmail(em)}catch(e){}
   $('amsg').textContent=t('aReset');
 };
-function logout(){
+async function logout(){
   const n=me?pend.filter(p=>p.agentUid===me.uid).length:0;
   if(n&&!confirm(t('logoutConfirm',n)))return;
-  auth.signOut();
+  if(unsub){unsub();unsub=null}
+  try{await auth.signOut()}catch(e){}
+  // Borra del dispositivo las visitas guardadas en caché (las pendientes de enviar se conservan aparte)
+  if(persist){try{await db.terminate();await db.clearPersistence()}catch(e){}location.reload()}
 }
 function legacy(){try{const a=JSON.parse(localStorage.getItem('visits')||'null');return Array.isArray(a)?a:[]}catch(e){return[]}}
 function checkLegacy(){const n=legacy().length;$('legacy').hidden=!n;if(n)$('legacyTxt').textContent=t('legacyN',n)}
@@ -732,7 +739,9 @@ async function start(){
   if(!me)return;const u=me;
   if(unsub){unsub();unsub=null}
   let sup=isSup;
-  try{sup=(await wt(db.collection('supervisores').doc((u.email||'').toLowerCase()).get(),8000)).exists}catch(e){}
+  const sd=db.collection('supervisores').doc((u.email||'').toLowerCase());
+  try{sup=(await wt(navigator.onLine?sd.get():sd.get({source:'cache'}),8000)).exists}
+  catch(e){try{sup=(await sd.get({source:'cache'})).exists}catch(e2){}}
   if(me!==u)return;
   isSup=sup;$('who').textContent=u.email+(isSup?t('sup'):'');
   const col=db.collection('visits'),qy=isSup?col:col.where('agentUid','==',u.uid);
