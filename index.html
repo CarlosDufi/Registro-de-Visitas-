@@ -103,7 +103,7 @@ button.p{background:var(--ac);color:var(--onac);width:100%;font-size:16px;margin
 <section id="t2" hidden>
 <div class="row" style="margin-top:8px;gap:8px"><h2 style="margin:0" data-i="allV"></h2><button id="pdfbtn" onclick="pdf()"></button></div>
 <div id="msg2" class="mu" style="min-height:18px;margin:6px 0"></div>
-<div class="card" style="padding:12px"><input id="q" type="search" data-ph="search" oninput="draw()"><select id="per" onchange="draw()" style="margin-top:8px"></select><select id="ag" onchange="draw()" style="margin-top:8px" hidden></select></div>
+<div class="card" style="padding:12px"><input id="q" type="search" data-ph="search" oninput="qInput()"><select id="per" onchange="refilter()" style="margin-top:8px"></select><select id="ag" onchange="refilter()" style="margin-top:8px" hidden></select></div>
 <div class="row" style="margin:4px 0 8px"><label class="chk" style="font-size:14px"><input type="checkbox" id="selall" onchange="selAll(this.checked)"><span data-i="selAll"></span></label><span id="cnt" class="mu"></span></div>
 <div class="card" id="list"><span class="mu"></span></div>
 </section>
@@ -143,7 +143,7 @@ es:{
  allV:'Todas las visitas',pdfAll:'Descargar todas (PDF)',pdfSel:n=>'Descargar seleccionadas ('+n+')',pdfRes:n=>'Descargar resultados ('+n+')',
  search:'Buscar por nº de referencia o propiedad',allPeriod:'Todo el periodo',quarters:'Trimestres',monthsL:'Meses',qLabel:(q,y)=>'T'+q+' '+y,
  months:['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'],allAgents:'Todos los agentes',
- selAll:'Seleccionar todas',cnt:n=>n+' hojas',cntF:(a,b)=>a+' de '+b+' hojas',empty:'Aún no hay visitas.',noMatch:'No hay visitas que coincidan con la búsqueda.',
+ selAll:'Seleccionar todas',cnt:n=>n+' hojas',cntF:(a,b)=>a+' de '+b+' hojas',empty:'Aún no hay visitas.',noMatch:'No hay visitas que coincidan con la búsqueda.',more:n=>'Mostrar más ('+n+' restantes)',
  propL:'Propiedad',ownerL:'Propietario',collabL:'Colaborador',clientL:'Cliente',agentL:'Agente',pendTag:'pendiente de enviar',errTag:c=>'error al enviar ('+c+')',dlPdf:'Descargar PDF',shPdf:'Compartir PDF',searching:'Buscando en el CRM…',noResults:'Sin resultados en el CRM. Puedes escribirlo a mano.',cbError:'No se pudo consultar el CRM. Puedes escribirlo a mano.',cbOffline:'Sin conexión: escríbelo a mano.',linked:'Vinculada al CRM',linkedC:'Cliente vinculado al CRM',
  crmOk:n=>'CRM: evento '+(n?'#'+n:'creado'),crmSyncing:'CRM: enviando…',crmStuck:'CRM: el envío no terminó',crmErr:m=>'CRM: error. '+m,crmSkip:'CRM: sin propiedad vinculada',crmWait:'CRM: pendiente de enviar',crmRetry:'Reintentar',crmBusy:'CRM: ya se está enviando…',shUnsupported:'Este dispositivo no permite compartir el PDF desde aquí; se ha descargado.',del:'Eliminar',
  delConfirm:'¿Eliminar esta visita?',delFail:c=>'No se pudo eliminar ('+c+').',clientUnsigned:'Firma cliente: sin firmar',sigBad:c=>c+': no válida',
@@ -181,7 +181,7 @@ en:{
  allV:'All viewings',pdfAll:'Download all (PDF)',pdfSel:n=>'Download selected ('+n+')',pdfRes:n=>'Download results ('+n+')',
  search:'Search by reference no. or property',allPeriod:'All time',quarters:'Quarters',monthsL:'Months',qLabel:(q,y)=>'Q'+q+' '+y,
  months:['January','February','March','April','May','June','July','August','September','October','November','December'],allAgents:'All agents',
- selAll:'Select all',cnt:n=>n+' sheets',cntF:(a,b)=>a+' of '+b+' sheets',empty:'No viewings yet.',noMatch:'No viewings match your search.',
+ selAll:'Select all',cnt:n=>n+' sheets',cntF:(a,b)=>a+' of '+b+' sheets',empty:'No viewings yet.',noMatch:'No viewings match your search.',more:n=>'Show more ('+n+' remaining)',
  propL:'Property',ownerL:'Owner',collabL:'Collaborator',clientL:'Client',agentL:'Agent',pendTag:'waiting to be sent',errTag:c=>'sending failed ('+c+')',dlPdf:'Download PDF',shPdf:'Share PDF',searching:'Searching the CRM…',noResults:'No results in the CRM. You can type it manually.',cbError:'Could not reach the CRM. You can type it manually.',cbOffline:'No connection: type it manually.',linked:'Linked to the CRM',linkedC:'Client linked to the CRM',
  crmOk:n=>'CRM: event '+(n?'#'+n:'created'),crmSyncing:'CRM: sending…',crmStuck:'CRM: sending did not finish',crmErr:m=>'CRM error: '+m,crmSkip:'CRM: no linked property',crmWait:'CRM: waiting to be sent',crmRetry:'Retry',crmBusy:'CRM: already sending…',shUnsupported:'This device cannot share the PDF from here; it has been downloaded instead.',del:'Delete',
  delConfirm:'Delete this viewing?',delFail:c=>'Could not delete ('+c+').',clientUnsigned:'Client signature: not signed',sigBad:c=>c+': invalid',
@@ -397,8 +397,8 @@ function filtered(){
 const sel=new Set();
 function toggle(id,on){on?sel.add(id):sel.delete(id);upd()}
 function selAll(on){filtered().forEach(v=>on?sel.add(v.id):sel.delete(v.id));draw()}
-function upd(){
-  const n=sel.size,f=filtered();
+function upd(ff){
+  const n=sel.size,f=ff||filtered();
   $('pdfbtn').textContent=n?t('pdfSel',n):(isFiltered()?t('pdfRes',f.length):t('pdfAll'));
   $('selall').checked=f.length>0&&f.every(v=>sel.has(v.id));
   $('cnt').textContent=isFiltered()?t('cntF',f.length,visits.length):t('cnt',visits.length);
@@ -546,13 +546,19 @@ function crmLine(v,own){
   return`<div class="crm">${esc(t('crmWait'))}${retry}</div>`;
 }
 function render(){updPend();buildPer();buildAg();draw()}
+/* La lista se pinta de PAGE en PAGE («Mostrar más»); el buscador espera a que se deje de escribir.
+   Selección, contadores y PDF siguen usando todos los resultados filtrados. */
+const PAGE=30;let shown=PAGE,qT=null;
+function refilter(){shown=PAGE;draw()}
+function qInput(){clearTimeout(qT);qT=setTimeout(refilter,250)}
 function draw(){
   const ae=document.activeElement;
   if(ae&&ae.classList&&ae.classList.contains('fbt')&&$('list').contains(ae)){deferred=true;upd();return}
   deferred=false;
   const f=filtered(),ids=new Set(f.map(v=>v.id));[...sel].forEach(i=>{if(!ids.has(i))sel.delete(i)});
-  if(!f.length){$('list').innerHTML='<span class="mu">'+esc(t(visits.length?'noMatch':'empty'))+'</span>';upd();return}
-  $('list').innerHTML=f.map(v=>{
+  if(!f.length){$('list').innerHTML='<span class="mu">'+esc(t(visits.length?'noMatch':'empty'))+'</span>';armStuck([]);upd(f);return}
+  const page=f.slice(0,shown);
+  $('list').innerHTML=page.map(v=>{
     const ps=getProps(v),multi=ps.length>1,own=!!(me&&v.agentUid===me.uid),c=cur(v);
     const sg=(nm,sig,lab,cap)=>sig?`<div class="mu">${esc(t(lab))}: <b>${esc(nm||'')}</b></div><div class="sigs">${sigFig(sig,t(cap))}</div>`:'';
     const plist=ps.map((p,k)=>`<div style="margin-top:6px"><span class="mu">${esc(t('propL'))}${multi?' '+(k+1):''}:</span> <b>${esc(p.property||p.ref||'—')}</b>${multi&&p.property&&p.ref?` <span class="mu">(Ref. ${esc(p.ref)})</span>`:''}${sg(p.ownerName,p.ownerSig,'ownerL','ownerSig')}${sg(p.collabName,p.collabSig,'collabL','collabSig')}</div>`).join('');
@@ -573,14 +579,15 @@ function draw(){
   ${fb}
   ${crmLine(v,own)}
   <div class="acts"><button data-act="pdf" data-id="${esc(v.id)}">${esc(t('dlPdf'))}</button><button data-act="share" data-id="${esc(v.id)}">${esc(t('shPdf'))}</button>${own?`<button data-act="del" data-id="${esc(v.id)}">${esc(t('del'))}</button>`:''}</div></div>`}).join('');
-  armStuck(f);upd();
+  if(f.length>page.length)$('list').insertAdjacentHTML('beforeend',`<div style="text-align:center;padding:12px 0 4px"><button type="button" data-act="more">${esc(t('more',f.length-page.length))}</button></div>`);
+  armStuck(page);upd(f);
 }
 /* Acciones de la lista por delegación: el id viaja en data-id (texto), nunca dentro de un onclick */
 $('list').addEventListener('click',e=>{
   const b=e.target.closest('[data-act]');if(!b||!$('list').contains(b))return;const id=b.dataset.id;
   switch(b.dataset.act){
     case 'pdf':pdf(id);break;case 'share':pdf(id,true);break;case 'del':del(id);break;
-    case 'fb':saveFb(id);break;case 'crm':crmSync(id);break;case 'star':setStar(id,+b.dataset.n);break;
+    case 'fb':saveFb(id);break;case 'crm':crmSync(id);break;case 'star':setStar(id,+b.dataset.n);break;case 'more':shown+=PAGE;draw();break;
   }
 });
 $('list').addEventListener('change',e=>{if(e.target.classList.contains('selv'))toggle(e.target.dataset.id,e.target.checked)});
@@ -734,7 +741,7 @@ async function start(){
 }
 auth.onAuthStateChanged(u=>{
   if(unsub){unsub();unsub=null}
-  srv=[];visits=[];sel.clear();me=u;isSup=false;errRetried=false;
+  srv=[];visits=[];sel.clear();me=u;isSup=false;errRetried=false;shown=PAGE;
   if(!u){$('q').value='';$('per').value='all';$('ag').value='all';show('auth');return}
   $('who').textContent=u.email;
   show('app');tab(1);checkLegacy();net();merge();render();start();
