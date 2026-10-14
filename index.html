@@ -284,7 +284,7 @@ async function fnCall(name,data,signal){
 }
 /* Generic ajax dropdown: input + loader below + list of suggestions */
 function combo(o){
-  // o: {input, status, list, fn, render(item)->{title,sub}, onPick(item), onEdit(), minChars}
+  // o: {input, status, list, fn, render(item)->{title,sub}, onPick(item), onEdit(), minChars, query(q)->texto enviado al CRM}
   const inp=$(o.input),st=$(o.status),sg=$(o.list);let seq=0,timer=null,ctl=null,items=[];
   const close=()=>{sg.hidden=true;sg.innerHTML=''};
   const say=(txt,spin)=>{st.innerHTML=spin?'<span class="sp"></span>':'';if(txt){const s=document.createElement('span');s.textContent=txt;st.appendChild(s)}};
@@ -293,7 +293,7 @@ function combo(o){
     if(!navigator.onLine){say(t('cbOffline'),false);close();return}
     say(t('searching'),true);
     try{
-      const r=await fnCall(o.fn,{q},ctl.signal);
+      const r=await fnCall(o.fn,{q:o.query?o.query(q):q},ctl.signal);
       if(my!==seq)return;
       items=(r&&r.items)||[];
       if(!items.length){say(t('noResults'),false);close();return}
@@ -357,7 +357,8 @@ function collabBtn(){$('cvb').textContent=t($('cvw').hidden?'collabAdd':'collabR
 function togCollab(){const w=$('cvw'),open=w.hidden;w.hidden=!open;if(open)pads.cvs.init();else{pads.cvs.clear();$('cvn').value=''}collabBtn()}
 function resetRows(){$('props').innerHTML='';Object.keys(rowCombo).forEach(k=>{rowCombo[k].reset();delete rowCombo[k]});Object.keys(pads).filter(k=>/^(os|cs)\d/.test(k)).forEach(k=>{pads[k].off();delete pads[k]});rows=[];addRow()}
 addRow();
-const clientCombo=combo({input:'c',status:'stc',list:'sgc',fn:'searchContacts',
+// El buscador de contactos de Respacio separa las palabras con «+» (un espacio no encuentra el nombre completo)
+const clientCombo=combo({input:'c',status:'stc',list:'sgc',fn:'searchContacts',query:q=>q.replace(/\s+/g,'+'),
   render:it=>({title:it.name,sub:it.reference_no}),
   onPick:it=>{$('c').value=it.name;$('c').dataset.cid=it.id;$('stc').innerHTML='<span class="lk">✓ '+esc(t('linkedC'))+'</span>'},
   onEdit:()=>{if($('c').dataset.cid){delete $('c').dataset.cid;$('stc').innerHTML=''}}});
