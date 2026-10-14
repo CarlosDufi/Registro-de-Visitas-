@@ -309,6 +309,21 @@ function addRow(){
     onPick:it=>{$('r'+n).value=it.reference_no;if(it.title)$('p'+n).value=it.title;$('r'+n).dataset.pid=it.id;linkNote(n)},
     onEdit:()=>{if($('r'+n).dataset.pid){delete $('r'+n).dataset.pid;linkNote(n)}}});
 }
+/* Vincula con el CRM las propiedades escritas a mano (p. ej. sin conexión): solo si el CRM devuelve exactamente
+   una propiedad con la misma referencia. Si el CRM no responde, se deja sin vincular y la visita se envía igual. */
+async function linkProps(props){
+  const key=s=>String(s||'').trim().toLowerCase();
+  await Promise.all((props||[]).map(async p=>{
+    const ref=String(p.ref||'').trim();
+    if(p.crmPropertyId||ref.length<2||ref.length>40)return;
+    try{
+      const r=await wt(fnCall('searchProperties',{q:ref}),8000);
+      const m=((r&&r.items)||[]).filter(it=>key(it.reference_no)===key(ref));
+      const pid=m.length===1?Number(m[0].id):0;
+      if(Number.isInteger(pid)&&pid>0)p.crmPropertyId=pid;
+    }catch(e){}
+  }));
+}
 function linkNote(n){const st=$('st'+n);if($('r'+n).dataset.pid){st.innerHTML='<span class="lk">✓ '+esc(t('linked'))+'</span>'}else st.innerHTML=''}
 function rmRow(n){if(rows.length<2)return;$('pr'+n).remove();['os','cs'].forEach(k=>{pads[k+n].off();delete pads[k+n]});delete rowCombo[n];rows=rows.filter(x=>x!==n);renumber()}
 const SG={o:{w:'ow',p:'os',n:'on',b:'ob',add:'ownerAdd',rm:'ownerRm'},c:{w:'cw',p:'cs',n:'cn',b:'cb',add:'collabAdd',rm:'collabRm'}};
@@ -585,6 +600,7 @@ $('save').onclick=async()=>{
   let queued=false;
   if(!navigator.onLine)queued=true;
   else{
+    await linkProps(v.props);
     try{await wt(db.collection('visits').doc(v.id).set(v),8000)}
     catch(e){
       if(e&&(e.code==='timeout'||e.code==='unavailable'))queued=true;
@@ -606,6 +622,7 @@ async function flush(all){
   try{
     for(const v of [...pend]){
       if(v.agentUid!==me.uid||(v.sendErr&&all!==true))continue;
+      await linkProps(v.props);if(v.props)savePend();
       const {sendErr,...data}=v;
       try{await wt(db.collection('visits').doc(v.id).set(data),15000)}
       catch(e){
