@@ -9,14 +9,14 @@ const CFG = {
     properties: BASE + 'reference_no_suggestion',
     contacts: BASE + 'contact_number_suggestion',
     event: BASE + 'add_viewing_feedback_event',
+    // Edits the notes of an existing event (event_id + notes), confirmed by Respacio
+    update: BASE + 'update_viewing_event',
   },
   // HTTP methods as written in the original API document (to be confirmed by IT)
-  methods: { properties: 'POST', contacts: 'GET', event: 'POST' },
+  methods: { properties: 'POST', contacts: 'GET', event: 'POST', update: 'POST' },
   // 'form' = application/x-www-form-urlencoded (arrays as property_arr[]=1&property_arr[]=2)
   // 'json' = application/json
   bodyFormat: 'form',
-  // Name of the parameter that identifies an existing event when editing it (to be confirmed by IT)
-  eventIdField: 'event_id',
   timeoutMs: 15000,
 };
 
@@ -131,7 +131,8 @@ function buildNotes(v) {
 }
 
 /*
- * Creates the "Viewing" event in the CRM (first time) or edits it (when an event_id is already stored),
+ * Creates the "Viewing" event in the CRM (first time, add_viewing_feedback_event) or updates its notes
+ * (when an event_id is already stored, update_viewing_event; it never creates a second event),
  * and stores the result in the visit document under "crm". Only the owner of the visit can trigger it.
  */
 async function syncVisit({ db, visitId, uid, email, callFn, now, cfg }) {
@@ -160,10 +161,11 @@ async function syncVisit({ db, visitId, uid, email, callFn, now, cfg }) {
   if (gate.busy) return { status: 'busy' };
 
   const { v, crm, ids } = gate;
-  const params = { user_email: email, property_arr: ids, notes: buildNotes(v) };
+  const notes = buildNotes(v);
+  const kind = crm.eventId ? 'update' : 'event';
+  const params = kind === 'update' ? { event_id: crm.eventId, notes } : { user_email: email, property_arr: ids, notes };
   const cid = asId(v.clientId);
-  if (cid) params.contact_id = cid;
-  if (crm.eventId) params[c.eventIdField] = crm.eventId;
+  if (cid && kind === 'event') params.contact_id = cid;
 
   const fail = async (message) => {
     const msg = String(message || 'Respacio rejected the request').slice(0, 300);
@@ -171,10 +173,11 @@ async function syncVisit({ db, visitId, uid, email, callFn, now, cfg }) {
     return { status: 'error', message: msg };
   };
   try {
-    const { http, json } = await call_('event', params);
-    console.log('Respacio event: http=' + http + ' status=' + (json && json.status) + ' message=' + String((json && json.message) || '').slice(0, 120) + ' event_id=' + (json && json.event_id));
+    const { http, json } = await call_(kind, params);
+    console.log('Respacio ' + kind + ': http=' + http + ' status=' + (json && json.status) + ' message=' + String((json && json.message) || '').slice(0, 120) + ' event_id=' + (json && json.event_id));
     if (json.status === 'success') {
-      const eventId = json.event_id != null && json.event_id !== '' ? Number(json.event_id) : crm.eventId || null;
+      // On update the event keeps its number; on create it is the one returned by Respacio
+      const eventId = kind === 'update' ? crm.eventId : json.event_id != null && json.event_id !== '' ? Number(json.event_id) : null;
       await ref.update({ crm: { status: 'ok', eventId, syncedAt: clock(), message: eventId ? '' : 'Respacio did not return an event id' } });
       return { status: 'ok', eventId };
     }
