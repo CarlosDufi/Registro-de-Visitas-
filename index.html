@@ -345,7 +345,7 @@ async function linkProps(props){
   }));
 }
 function linkNote(n){const st=$('st'+n);if($('r'+n).dataset.pid){st.innerHTML='<span class="lk">✓ '+esc(t('linked'))+'</span>'}else st.innerHTML=''}
-function rmRow(n){if(rows.length<2)return;$('pr'+n).remove();['os','cs'].forEach(k=>{pads[k+n].off();delete pads[k+n]});delete rowCombo[n];rows=rows.filter(x=>x!==n);renumber()}
+function rmRow(n){if(rows.length<2)return;$('pr'+n).remove();['os','cs'].forEach(k=>{pads[k+n].off();delete pads[k+n]});rowCombo[n].reset();delete rowCombo[n];rows=rows.filter(x=>x!==n);renumber()}
 const SG={o:{w:'ow',p:'os',n:'on',b:'ob',add:'ownerAdd',rm:'ownerRm'},c:{w:'cw',p:'cs',n:'cn',b:'cb',add:'collabAdd',rm:'collabRm'}};
 function sigBtn(n,k){const s=SG[k];$(s.b+n).textContent=t($(s.w+n).hidden?s.add:s.rm)}
 function togSig(n,k){
@@ -355,7 +355,7 @@ function togSig(n,k){
 }
 function collabBtn(){$('cvb').textContent=t($('cvw').hidden?'collabAdd':'collabRm')}
 function togCollab(){const w=$('cvw'),open=w.hidden;w.hidden=!open;if(open)pads.cvs.init();else{pads.cvs.clear();$('cvn').value=''}collabBtn()}
-function resetRows(){$('props').innerHTML='';Object.keys(rowCombo).forEach(k=>delete rowCombo[k]);Object.keys(pads).filter(k=>/^(os|cs)\d/.test(k)).forEach(k=>{pads[k].off();delete pads[k]});rows=[];addRow()}
+function resetRows(){$('props').innerHTML='';Object.keys(rowCombo).forEach(k=>{rowCombo[k].reset();delete rowCombo[k]});Object.keys(pads).filter(k=>/^(os|cs)\d/.test(k)).forEach(k=>{pads[k].off();delete pads[k]});rows=[];addRow()}
 addRow();
 const clientCombo=combo({input:'c',status:'stc',list:'sgc',fn:'searchContacts',
   render:it=>({title:it.name,sub:it.reference_no}),
@@ -514,7 +514,8 @@ async function pdf(id,share){
       }
       m.textContent=t('shUnsupported')+(warn?' '+warn:'');
     }
-    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();
+    // El enlace temporal se libera pasado un minuto (liberarlo al instante corta la descarga en algunos móviles)
+    const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);
   }catch(e){m.textContent=t('pdfErr')}
 }
 /* ===== Lista, con valoración y feedback editables dentro de cada visita ===== */
@@ -685,7 +686,7 @@ $('save').onclick=async()=>{
   }
   if(queued){pend.push(v);const ok=savePend();merge();render();msg(t(ok?'queued':'queuedMem'))}
   else{msg(t('saved'));crmSync(v.id,v)}
-  refreshDate();resetRows();$('c').value='';delete $('c').dataset.cid;$('stc').innerHTML='';clr('sc');clr('sa');if(!$('cvw').hidden)togCollab();
+  refreshDate();resetRows();clientCombo.reset();$('c').value='';delete $('c').dataset.cid;$('stc').innerHTML='';clr('sc');clr('sa');if(!$('cvw').hidden)togCollab();
   $('save').disabled=false;
 };
 /* Errores de conexión: se para y se reintenta más tarde. Cualquier otro error marca la visita (sendErr) y se sigue con las demás.
@@ -727,6 +728,7 @@ $('login').onclick=async()=>{
   $('login').disabled=false;
 };
 $('pw').addEventListener('keydown',e=>{if(e.key==='Enter')$('login').click()});
+$('em').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();if($('pw').value)$('login').click();else $('pw').focus()}});
 /* El mensaje de éxito no dice si el correo tiene cuenta (protección de enumeración); sí se avisa si no se pudo enviar */
 $('forgot').onclick=async()=>{
   const em=$('em').value.trim(),b=$('forgot');
