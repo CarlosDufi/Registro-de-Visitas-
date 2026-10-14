@@ -209,7 +209,12 @@ let pendOk=true;
 function savePend(){try{if(pend.length)localStorage.setItem('pendientes',JSON.stringify(pend));else localStorage.removeItem('pendientes');pendOk=true}catch(e){pendOk=false}return pendOk}
 function memOnly(){if(pendOk)return[];const st=new Set(loadPend().map(p=>p.id));return pend.filter(p=>!st.has(p.id))}
 pend=loadPend();
-function merge(){const mine=me?pend.filter(p=>p.agentUid===me.uid):[];visits=[...srv,...mine.filter(p=>!srv.some(v=>v.id===p.id))]}
+/* Visitas borradas pendientes de confirmar en el servidor ({id,uid}). Se guardan en el dispositivo para que el borrado
+   no se pierda sin conexión y para que una visita que llegue tarde al servidor no reaparezca. */
+let borr=(()=>{try{const a=JSON.parse(localStorage.getItem('borrar')||'null');return Array.isArray(a)?a:[]}catch(e){return[]}})();
+function saveBorr(){try{if(borr.length)localStorage.setItem('borrar',JSON.stringify(borr));else localStorage.removeItem('borrar')}catch(e){}}
+const isBorr=id=>borr.some(b=>b.id===id);
+function merge(){const mine=me?pend.filter(p=>p.agentUid===me.uid):[];visits=[...srv,...mine.filter(p=>!srv.some(v=>v.id===p.id))].filter(v=>!isBorr(v.id))}
 function updPend(){
   const n=me?pend.filter(p=>p.agentUid===me.uid).length:0;$('pend').hidden=!n;if(n)$('pendTxt').textContent=t('pendN',n);
   const m=me?memOnly().filter(p=>p.agentUid===me.uid).length:0;$('pendMem').hidden=!m;if(m)$('pendMem').textContent=t('pendMem',m);
@@ -573,9 +578,28 @@ $('list').addEventListener('focusout',e=>{
   if(e.target.classList&&e.target.classList.contains('fbt'))setTimeout(()=>{if(deferred&&!$('list').contains(document.activeElement)){deferred=false;draw()}},600);
 });
 async function del(id){
-  if(!confirm(t('delConfirm')))return;
-  if(pend.some(p=>p.id===id)){pend=pend.filter(p=>p.id!==id);savePend();merge();render();return}
-  try{await db.collection('visits').doc(id).delete()}catch(e){$('msg2').textContent=t('delFail',e.code||'error')}
+  if(!confirm(t('delConfirm'))||!me)return;
+  pend=pend.filter(p=>p.id!==id);savePend();
+  if(!isBorr(id)){borr.push({id,uid:me.uid});saveBorr()}
+  merge();render();runDeletes();
+}
+/* Borra en el servidor las visitas apuntadas. Error de conexión: se reintenta más tarde. permission-denied/not-found:
+   la visita no existe en el servidor (nunca llegó), no hay nada que borrar. Otro error: se avisa y la visita vuelve a verse. */
+let deleting=false;
+async function runDeletes(){
+  if(deleting||!me||!navigator.onLine)return;
+  deleting=true;
+  try{
+    for(const b of borr.filter(b=>b.uid===me.uid)){
+      try{await wt(db.collection('visits').doc(b.id).delete(),15000)}
+      catch(e){
+        const c=(e&&e.code)||'error';
+        if(NET_ERR.includes(c))break;
+        if(c!=='permission-denied'&&c!=='not-found'){$('msg2').textContent=t('delFail',c)}
+      }
+      borr=borr.filter(x=>x.id!==b.id);saveBorr();merge();render();
+    }
+  }finally{deleting=false}
 }
 /* ===== Guardar visita ===== */
 $('save').onclick=async()=>{
@@ -627,12 +651,13 @@ $('save').onclick=async()=>{
 const NET_ERR=['timeout','unavailable','deadline-exceeded','unauthenticated'];let errRetried=false;
 async function flush(all){
   if(flushing||!me||!navigator.onLine)return;
+  runDeletes();
   if(!errRetried){all=true;errRetried=true}
   flushing=true;
   try{
     for(const v of [...pend]){
       if(v.agentUid!==me.uid||(v.sendErr&&all!==true))continue;
-      await linkProps(v.props);if(v.props)savePend();
+      await linkProps(v.props);if(!pend.includes(v))continue;savePend();
       const {sendErr,...data}=v;
       try{await wt(db.collection('visits').doc(v.id).set(data),15000)}
       catch(e){
@@ -640,7 +665,7 @@ async function flush(all){
         if(NET_ERR.includes(c))break;
         v.sendErr=c;savePend();merge();render();continue;
       }
-      pend=pend.filter(x=>x.id!==v.id);savePend();merge();render();crmSync(v.id,data);
+      pend=pend.filter(x=>x.id!==v.id);savePend();merge();render();if(!isBorr(v.id))crmSync(v.id,data);
     }
   }finally{flushing=false}
 }
