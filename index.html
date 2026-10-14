@@ -145,7 +145,7 @@ es:{
  months:['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'],allAgents:'Todos los agentes',
  selAll:'Seleccionar todas',cnt:n=>n+' hojas',cntF:(a,b)=>a+' de '+b+' hojas',empty:'Aún no hay visitas.',noMatch:'No hay visitas que coincidan con la búsqueda.',
  propL:'Propiedad',ownerL:'Propietario',collabL:'Colaborador',clientL:'Cliente',agentL:'Agente',pendTag:'pendiente de enviar',errTag:c=>'error al enviar ('+c+')',dlPdf:'Descargar PDF',shPdf:'Compartir PDF',searching:'Buscando en el CRM…',noResults:'Sin resultados en el CRM. Puedes escribirlo a mano.',cbError:'No se pudo consultar el CRM. Puedes escribirlo a mano.',cbOffline:'Sin conexión: escríbelo a mano.',linked:'Vinculada al CRM',linkedC:'Cliente vinculado al CRM',
- crmOk:n=>'CRM: evento '+(n?'#'+n:'creado'),crmSyncing:'CRM: enviando…',crmErr:m=>'CRM: error. '+m,crmSkip:'CRM: sin propiedad vinculada',crmWait:'CRM: pendiente de enviar',crmRetry:'Reintentar',crmBusy:'CRM: ya se está enviando…',shUnsupported:'Este dispositivo no permite compartir el PDF desde aquí; se ha descargado.',del:'Eliminar',
+ crmOk:n=>'CRM: evento '+(n?'#'+n:'creado'),crmSyncing:'CRM: enviando…',crmStuck:'CRM: el envío no terminó',crmErr:m=>'CRM: error. '+m,crmSkip:'CRM: sin propiedad vinculada',crmWait:'CRM: pendiente de enviar',crmRetry:'Reintentar',crmBusy:'CRM: ya se está enviando…',shUnsupported:'Este dispositivo no permite compartir el PDF desde aquí; se ha descargado.',del:'Eliminar',
  delConfirm:'¿Eliminar esta visita?',delFail:c=>'No se pudo eliminar ('+c+').',clientUnsigned:'Firma cliente: sin firmar',sigBad:c=>c+': no válida',
  fbTitle:'Valoración y feedback',fbPh:'Comentarios del cliente sobre la propiedad (opcional)',fbSave:'Guardar valoración y feedback',unsaved:'Cambios sin guardar',fbSaved:'Guardado',
  savedLocal:'Guardado en el dispositivo; se enviará con la visita.',savedMem:'No hay espacio en el dispositivo: se enviará con la visita si no cierras la app.',needOnline:'Necesitas conexión para guardar los cambios.',fbDenied:'No tienes permiso para editar esta visita.',fbFail:c=>'No se pudo guardar ('+c+').',
@@ -183,7 +183,7 @@ en:{
  months:['January','February','March','April','May','June','July','August','September','October','November','December'],allAgents:'All agents',
  selAll:'Select all',cnt:n=>n+' sheets',cntF:(a,b)=>a+' of '+b+' sheets',empty:'No viewings yet.',noMatch:'No viewings match your search.',
  propL:'Property',ownerL:'Owner',collabL:'Collaborator',clientL:'Client',agentL:'Agent',pendTag:'waiting to be sent',errTag:c=>'sending failed ('+c+')',dlPdf:'Download PDF',shPdf:'Share PDF',searching:'Searching the CRM…',noResults:'No results in the CRM. You can type it manually.',cbError:'Could not reach the CRM. You can type it manually.',cbOffline:'No connection: type it manually.',linked:'Linked to the CRM',linkedC:'Client linked to the CRM',
- crmOk:n=>'CRM: event '+(n?'#'+n:'created'),crmSyncing:'CRM: sending…',crmErr:m=>'CRM error: '+m,crmSkip:'CRM: no linked property',crmWait:'CRM: waiting to be sent',crmRetry:'Retry',crmBusy:'CRM: already sending…',shUnsupported:'This device cannot share the PDF from here; it has been downloaded instead.',del:'Delete',
+ crmOk:n=>'CRM: event '+(n?'#'+n:'created'),crmSyncing:'CRM: sending…',crmStuck:'CRM: sending did not finish',crmErr:m=>'CRM error: '+m,crmSkip:'CRM: no linked property',crmWait:'CRM: waiting to be sent',crmRetry:'Retry',crmBusy:'CRM: already sending…',shUnsupported:'This device cannot share the PDF from here; it has been downloaded instead.',del:'Delete',
  delConfirm:'Delete this viewing?',delFail:c=>'Could not delete ('+c+').',clientUnsigned:'Client signature: not signed',sigBad:c=>c+': invalid',
  fbTitle:'Rating and feedback',fbPh:'Client comments about the property (optional)',fbSave:'Save rating and feedback',unsaved:'Unsaved changes',fbSaved:'Saved',
  savedLocal:'Saved on the device; it will be sent with the viewing.',savedMem:'No space left on the device: it will be sent with the viewing if you do not close the app.',needOnline:'You need a connection to save changes.',fbDenied:'You do not have permission to edit this viewing.',fbFail:c=>'Could not save ('+c+').',
@@ -508,13 +508,23 @@ async function crmSync(id,vv){
   try{await wt(fnCall('syncViewing',{visitId:id}),30000)}catch(e){/* the status is read back from the visit */}
   finally{delete crmBusy[id];draw()}
 }
+/* Si la función del servidor se corta, la visita puede quedarse en "syncing". El servidor acepta un reintento
+   pasados 90 s; la app lo ofrece (manual, para no duplicar eventos) pasados 2 min desde lockAt. */
+const CRM_STUCK=120000;let stuckTimer=null;
+const crmStuck=c=>Date.now()-(Number(c.lockAt)||0)>=CRM_STUCK;
+function armStuck(list){
+  clearTimeout(stuckTimer);stuckTimer=null;
+  const next=Math.min(...list.map(v=>v.crm&&v.crm.status==='syncing'&&!crmStuck(v.crm)?(Number(v.crm.lockAt)||0)+CRM_STUCK:Infinity));
+  if(next<Infinity)stuckTimer=setTimeout(draw,Math.max(0,next-Date.now())+500);
+}
 function crmLine(v,own){
   const linked=getProps(v).some(p=>p.crmPropertyId);
   if(!linked)return`<div class="crm">${esc(t('crmSkip'))}</div>`;
   const c=v.crm||{};
   if(pend.some(p=>p.id===v.id))return`<div class="crm">${esc(t('crmWait'))}</div>`;
-  if(crmBusy[v.id]||c.status==='syncing')return`<div class="crm">${esc(t('crmSyncing'))}</div>`;
   const retry=own?`<button type="button" data-act="crm" data-id="${esc(v.id)}">${esc(t('crmRetry'))}</button>`:'';
+  if(crmBusy[v.id]||(c.status==='syncing'&&!crmStuck(c)))return`<div class="crm">${esc(t('crmSyncing'))}</div>`;
+  if(c.status==='syncing')return`<div class="crm"><span class="erc">${esc(t('crmStuck'))}</span>${retry}</div>`;
   if(c.status==='ok')return`<div class="crm"><span class="okc">✓ ${esc(t('crmOk',c.eventId))}</span>${c.message?` <span>${esc(c.message)}</span>`:''}</div>`;
   if(c.status==='error')return`<div class="crm"><span class="erc">${esc(t('crmErr',c.message||''))}</span>${retry}</div>`;
   return`<div class="crm">${esc(t('crmWait'))}${retry}</div>`;
@@ -547,7 +557,7 @@ function draw(){
   ${fb}
   ${crmLine(v,own)}
   <div class="acts"><button data-act="pdf" data-id="${esc(v.id)}">${esc(t('dlPdf'))}</button><button data-act="share" data-id="${esc(v.id)}">${esc(t('shPdf'))}</button>${own?`<button data-act="del" data-id="${esc(v.id)}">${esc(t('del'))}</button>`:''}</div></div>`}).join('');
-  upd();
+  armStuck(f);upd();
 }
 /* Acciones de la lista por delegación: el id viaja en data-id (texto), nunca dentro de un onclick */
 $('list').addEventListener('click',e=>{
