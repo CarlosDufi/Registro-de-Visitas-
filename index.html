@@ -149,7 +149,7 @@ es:{
  delConfirm:'¿Eliminar esta visita?',delFail:c=>'No se pudo eliminar ('+c+').',clientUnsigned:'Firma cliente: sin firmar',sigBad:c=>c+': no válida',
  fbTitle:'Valoración y feedback',fbPh:'Comentarios del cliente sobre la propiedad (opcional)',fbSave:'Guardar valoración y feedback',unsaved:'Cambios sin guardar',fbSaved:'Guardado',
  savedLocal:'Guardado en el dispositivo; se enviará con la visita.',savedMem:'No hay espacio en el dispositivo: se enviará con la visita si no cierras la app.',needOnline:'Necesitas conexión para guardar los cambios.',fbDenied:'No tienes permiso para editar esta visita.',fbFail:c=>'No se pudo guardar ('+c+').',
- noPdf:'No hay visitas que descargar.',pdfLoad:'No se pudo cargar el generador de PDF.',pdfErr:'Error al generar el PDF.',
+ noPdf:'No hay visitas que descargar.',pdfFont:'No se pudo cargar la fuente del PDF: algunos nombres pueden no verse bien.',pdfScript:'Algunos nombres usan un alfabeto que el PDF no puede mostrar (chino, árabe…). Escríbelos con letras latinas.',pdfLoad:'No se pudo cargar el generador de PDF.',pdfErr:'Error al generar el PDF.',
  pdfT1:'Ficha de visita',pdfTN:'Registro de visitas',gen:'Generado el',hDate:'FECHA',hClient:'CLIENTE',hAgent:'AGENTE',hProps:'PROPIEDADES VISITADAS',refP:'Ref.',pClientSig:'FIRMA CLIENTE',pAgentSig:'FIRMA AGENTE',pCollabSig:'FIRMA COLABORADOR',
  aBad:'Correo o contraseña incorrectos.',aMany:'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.',aNet:'Sin conexión. Inténtalo de nuevo.',aFail:'No se pudo iniciar sesión.',
  aEmpty:'Escribe tu correo y tu contraseña.',aMail:'Escribe tu correo arriba y pulsa de nuevo.',aReset:'Si el correo está dado de alta, recibirás un enlace para cambiar la contraseña.',aBadMail:'El correo no es válido. Revísalo.',aResetFail:'No se pudo enviar el enlace. Inténtalo de nuevo.',
@@ -187,7 +187,7 @@ en:{
  delConfirm:'Delete this viewing?',delFail:c=>'Could not delete ('+c+').',clientUnsigned:'Client signature: not signed',sigBad:c=>c+': invalid',
  fbTitle:'Rating and feedback',fbPh:'Client comments about the property (optional)',fbSave:'Save rating and feedback',unsaved:'Unsaved changes',fbSaved:'Saved',
  savedLocal:'Saved on the device; it will be sent with the viewing.',savedMem:'No space left on the device: it will be sent with the viewing if you do not close the app.',needOnline:'You need a connection to save changes.',fbDenied:'You do not have permission to edit this viewing.',fbFail:c=>'Could not save ('+c+').',
- noPdf:'There are no viewings to download.',pdfLoad:'Could not load the PDF generator.',pdfErr:'Error generating the PDF.',
+ noPdf:'There are no viewings to download.',pdfFont:'Could not load the PDF font: some names may not display correctly.',pdfScript:'Some names use an alphabet the PDF cannot display (Chinese, Arabic…). Write them in Latin letters.',pdfLoad:'Could not load the PDF generator.',pdfErr:'Error generating the PDF.',
  pdfT1:'Viewing record',pdfTN:'Viewing log',gen:'Generated on',hDate:'DATE',hClient:'CLIENT',hAgent:'AGENT',hProps:'PROPERTIES VIEWED',refP:'Ref.',pClientSig:'CLIENT SIGNATURE',pAgentSig:'AGENT SIGNATURE',pCollabSig:'COLLABORATOR SIGNATURE',
  aBad:'Incorrect email or password.',aMany:'Too many attempts. Wait a few minutes and try again.',aNet:'No connection. Please try again.',aFail:'Could not sign in.',
  aEmpty:'Enter your email and password.',aMail:'Enter your email above and press again.',aReset:'If the email is registered, you will receive a link to change your password.',aBadMail:'The email address is not valid. Please check it.',aResetFail:'The link could not be sent. Please try again.',
@@ -408,6 +408,21 @@ function upd(ff){
   $('cnt').textContent=isFiltered()?t('cntF',f.length,visits.length):t('cnt',visits.length);
 }
 /* ===== PDF (sin valoración ni feedback) ===== */
+/* Fuente del PDF. La estándar (Helvetica) solo imprime caracteres de Europa occidental (WinAnsi). Si algún texto
+   tiene otros (Łukasz, Иван, Γιώργος…), ese PDF se genera con Noto Sans (latín completo, cirílico y griego). */
+const WINANSI=/^[\x00-\x7F\xA0-\xFF€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ]*$/;
+const NOTO_OK=/^[\u0000-\u024F\u0250-\u036F\u0370-\u03FF\u0400-\u052F\u1E00-\u1FFF\u2000-\u206F\u20A0-\u20CF\u2100-\u214F]*$/;
+let notoB64=null;
+async function loadNoto(){
+  if(notoB64)return notoB64;
+  const b64=async u=>{const a=new Uint8Array(await (await fetch(u)).arrayBuffer());let s='';for(let i=0;i<a.length;i+=32768)s+=String.fromCharCode.apply(null,a.subarray(i,i+32768));return btoa(s)};
+  const [n,b]=await Promise.all([b64('fonts/NotoSans-Regular.ttf'),b64('fonts/NotoSans-Bold.ttf')]);
+  return notoB64={n,b};
+}
+function pdfTexts(list){
+  const o=[];list.forEach(v=>{o.push(v.client,v.collabName,nombre(v.agentEmail));getProps(v).forEach(p=>o.push(p.ref,p.property,p.ownerName,p.collabName))});
+  return o.filter(Boolean).map(String).join(' ');
+}
 async function pdf(id,share){
   const m=$('msg2');m.textContent='';
   const list=id?visits.filter(v=>v.id===id):(sel.size?sorted().filter(v=>sel.has(v.id)):filtered());
@@ -415,7 +430,11 @@ async function pdf(id,share){
   if(!window.jspdf){m.textContent=t('pdfLoad');return}
   try{
     const docL=list.every(v=>lg(v)===lg(list[0]))?lg(list[0]):LANG;
-    const d=new window.jspdf.jsPDF({unit:'mm',format:'a4'});
+    const d=new window.jspdf.jsPDF({unit:'mm',format:'a4'}),txt=pdfTexts(list);let warn='';
+    if(!WINANSI.test(txt)){
+      try{const f=await loadNoto();d.addFileToVFS('NotoSans-Regular.ttf',f.n);d.addFont('NotoSans-Regular.ttf','NotoSans','normal');d.addFileToVFS('NotoSans-Bold.ttf',f.b);d.addFont('NotoSans-Bold.ttf','NotoSans','bold');d.setFont('NotoSans','normal');if(!NOTO_OK.test(txt))warn=t('pdfScript')}
+      catch(e){warn=t('pdfFont')}
+    }
     try{const i=$('logo');if(!i.naturalWidth)throw 0;const c=document.createElement('canvas');c.width=i.naturalWidth;c.height=i.naturalHeight;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(i,0,0);d.addImage(c.toDataURL('image/jpeg',0.9),'JPEG',80,10,50,50*i.naturalHeight/i.naturalWidth)}catch(e){d.setFontSize(18);d.text('PRESTIGE PROPERTIES',105,30,{align:'center'});d.setFontSize(9);d.text('SALES, RENTALS & CONCIERGE',105,37,{align:'center'})}
     d.setFontSize(15);d.text(T(list.length===1?'pdfT1':'pdfTN',docL),105,58,{align:'center'});
     d.setFontSize(9);d.text(T('gen',docL)+' '+fmt(hoy()),105,64,{align:'center'});
@@ -486,13 +505,14 @@ async function pdf(id,share){
     const p0=getProps(list[0])[0];
     const name=list.length===1?'visita-'+String(p0.ref||p0.property||list[0].date).replace(/[^\w-]+/g,'_')+'.pdf':'visitas.pdf';
     const blob=new Blob([data],{type:'application/pdf'});
+    if(warn)m.textContent=warn;
     if(share){
       let file=null;try{file=new File([blob],name,{type:'application/pdf'})}catch(e){}
       if(file&&navigator.canShare&&navigator.canShare({files:[file]})){
         try{await navigator.share({files:[file],title:name.replace(/\.pdf$/,'')});return}
         catch(e){if(e&&e.name==='AbortError')return}
       }
-      m.textContent=t('shUnsupported');
+      m.textContent=t('shUnsupported')+(warn?' '+warn:'');
     }
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();
   }catch(e){m.textContent=t('pdfErr')}
