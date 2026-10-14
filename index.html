@@ -152,7 +152,7 @@ es:{
  noPdf:'No hay visitas que descargar.',pdfLoad:'No se pudo cargar el generador de PDF.',pdfErr:'Error al generar el PDF.',
  pdfT1:'Ficha de visita',pdfTN:'Registro de visitas',gen:'Generado el',hDate:'FECHA',hClient:'CLIENTE',hAgent:'AGENTE',hProps:'PROPIEDADES VISITADAS',refP:'Ref.',pClientSig:'FIRMA CLIENTE',pAgentSig:'FIRMA AGENTE',pCollabSig:'FIRMA COLABORADOR',
  aBad:'Correo o contraseña incorrectos.',aMany:'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.',aNet:'Sin conexión. Inténtalo de nuevo.',aFail:'No se pudo iniciar sesión.',
- aEmpty:'Escribe tu correo y tu contraseña.',aMail:'Escribe tu correo arriba y pulsa de nuevo.',aReset:'Si el correo está dado de alta, recibirás un enlace para cambiar la contraseña.',
+ aEmpty:'Escribe tu correo y tu contraseña.',aMail:'Escribe tu correo arriba y pulsa de nuevo.',aReset:'Si el correo está dado de alta, recibirás un enlace para cambiar la contraseña.',aBadMail:'El correo no es válido. Revísalo.',aResetFail:'No se pudo enviar el enlace. Inténtalo de nuevo.',
  logoutConfirm:n=>'Hay '+n+' visita(s) pendiente(s) de enviar. Se enviarán cuando vuelvas a entrar con este usuario. ¿Salir ahora?',
  uploaded:'Visitas subidas a la nube.',uploadFail:c=>'No se pudieron subir ('+c+').',dropConfirm:'¿Borrar del dispositivo las visitas guardadas sin subirlas?',
  loadFail:c=>'No se pudieron cargar las visitas ('+c+').',star:n=>n+' de 5'
@@ -190,7 +190,7 @@ en:{
  noPdf:'There are no viewings to download.',pdfLoad:'Could not load the PDF generator.',pdfErr:'Error generating the PDF.',
  pdfT1:'Viewing record',pdfTN:'Viewing log',gen:'Generated on',hDate:'DATE',hClient:'CLIENT',hAgent:'AGENT',hProps:'PROPERTIES VIEWED',refP:'Ref.',pClientSig:'CLIENT SIGNATURE',pAgentSig:'AGENT SIGNATURE',pCollabSig:'COLLABORATOR SIGNATURE',
  aBad:'Incorrect email or password.',aMany:'Too many attempts. Wait a few minutes and try again.',aNet:'No connection. Please try again.',aFail:'Could not sign in.',
- aEmpty:'Enter your email and password.',aMail:'Enter your email above and press again.',aReset:'If the email is registered, you will receive a link to change your password.',
+ aEmpty:'Enter your email and password.',aMail:'Enter your email above and press again.',aReset:'If the email is registered, you will receive a link to change your password.',aBadMail:'The email address is not valid. Please check it.',aResetFail:'The link could not be sent. Please try again.',
  logoutConfirm:n=>n+' viewing(s) are waiting to be sent. They will be sent when you sign in again with this user. Log out now?',
  uploaded:'Viewings uploaded to the cloud.',uploadFail:c=>'Could not upload ('+c+').',dropConfirm:'Delete the viewings saved on this device without uploading them?',
  loadFail:c=>'Could not load the viewings ('+c+').',star:n=>n+' of 5'
@@ -707,11 +707,17 @@ $('login').onclick=async()=>{
   $('login').disabled=false;
 };
 $('pw').addEventListener('keydown',e=>{if(e.key==='Enter')$('login').click()});
+/* El mensaje de éxito no dice si el correo tiene cuenta (protección de enumeración); sí se avisa si no se pudo enviar */
 $('forgot').onclick=async()=>{
-  const em=$('em').value.trim();
+  const em=$('em').value.trim(),b=$('forgot');
   if(!em){$('amsg').textContent=t('aMail');return}
-  try{await auth.sendPasswordResetEmail(em)}catch(e){}
-  $('amsg').textContent=t('aReset');
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@.]{2,}$/.test(em)){$('amsg').textContent=t('aBadMail');return}
+  if(!navigator.onLine){$('amsg').textContent=t('aNet');return}
+  b.disabled=true;$('amsg').textContent='';
+  let k='aReset';
+  try{auth.languageCode=LANG;await auth.sendPasswordResetEmail(em)}
+  catch(e){const c=(e&&e.code)||'';k=c==='auth/user-not-found'?'aReset':c==='auth/invalid-email'?'aBadMail':c==='auth/network-request-failed'?'aNet':c==='auth/too-many-requests'?'aMany':'aResetFail'}
+  $('amsg').textContent=t(k);b.disabled=false;
 };
 async function logout(){
   const n=me?pend.filter(p=>p.agentUid===me.uid).length:0;
