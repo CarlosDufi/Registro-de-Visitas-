@@ -88,7 +88,8 @@ function diag(kind, http, json, list) {
 }
 
 async function searchProperties(q, opts) {
-  const { http, json } = await call('properties', { reference_no: q }, opts);
+  // include_private=1: also returns properties that are private on the website (confirmed by Respacio)
+  const { http, json } = await call('properties', { reference_no: q, include_private: 1 }, opts);
   const list = json && json.data && json.data.property_list;
   diag('properties', http, json, list);
   if (json.status !== 'success' || !Array.isArray(list)) return [];

@@ -20,6 +20,9 @@ Las credenciales de Respacio (`RESPACIO_BASIC`, `RESPACIO_API_KEY`) están en lo
 - **Búsqueda de contactos.** Respacio busca en `contact_number_suggestion` por nombre, apellido, nombre completo, móvil o
   correo y devuelve como máximo 20 contactos; la app los ordena poniendo primero los que coinciden con lo escrito.
 
+- **Propiedades privadas.** `searchProperties` envía `include_private=1` a `reference_no_suggestion` para incluir las
+  propiedades privadas en la web (indicado por Respacio). Se despliega en la función `searchProperties`.
+
 ## Pendiente
 
 - **Varias propiedades.** Con varias propiedades Respacio crea un evento por propiedad pero devuelve un solo `event_id`;
