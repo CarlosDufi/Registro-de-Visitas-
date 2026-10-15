@@ -81,7 +81,9 @@ button.p{background:var(--ac);color:var(--onac);width:100%;font-size:16px;margin
 <div class="card" id="legacy" hidden><b data-i="legacyT"></b><p class="mu" id="legacyTxt"></p><div class="acts"><button onclick="uploadLegacy()" data-i="legacyUp"></button><button onclick="dropLegacy()" data-i="legacyDrop"></button></div></div>
 <nav class="tabs"><button id="b1" class="on" onclick="tab(1)" data-i="tabNew"></button><button id="b2" onclick="tab(2)" data-i="tabList"></button></nav>
 <section id="t1">
+<div class="card" id="drafts" hidden><b id="draftsT"></b><div id="draftList"></div></div>
 <div class="card">
+  <div id="draftBar" class="row" hidden style="margin:-4px 0 4px;gap:8px"><span class="mu" data-i="draftEditing"></span><button type="button" onclick="newBlank()" data-i="newBlank"></button></div>
   <label for="f" data-i="date"></label><input id="f" type="date">
   <label data-i="props"></label>
   <p class="mu hint" data-i="propHint"></p>
@@ -101,6 +103,7 @@ button.p{background:var(--ac);color:var(--onac);width:100%;font-size:16px;margin
   <div><button type="button" id="cv2b" onclick="togCollab2()" style="margin-top:12px"></button></div>
   <div id="cv2w" hidden><label for="cv2n" data-i="collab2Name"></label><input id="cv2n" autocomplete="off"><label data-i="collab2Sig"></label><canvas id="cv2s"></canvas><button type="button" onclick="clr('cv2s')" style="margin-top:6px" data-i="clearSig"></button></div></div>
   <button class="p" id="save" data-i="save"></button>
+  <button type="button" id="saveDraft" onclick="saveDraft()" style="width:100%;margin-top:8px" data-i="saveDraft"></button>
   <div id="msg"></div>
 </div>
 </section>
@@ -142,6 +145,7 @@ es:{
  fr1C2:'Los clientes, al firmar este documento, confirman que han realizado la visita a la propiedad indicada arriba.',
  frNC2:'Los clientes, al firmar este documento, confirman que han realizado las visitas a todas las propiedades indicadas arriba.',
  save:'Guardar visita',saving:'Guardando…',saved:'Visita guardada.',
+ saveDraft:'Guardar borrador',draftSaved:'Borrador guardado. Puedes preparar otra ficha.',draftsT:n=>'Borradores ('+n+')',draftOpen:'Abrir',draftDelConfirm:'¿Eliminar este borrador?',draftOpenConfirm:'La ficha actual tiene datos sin guardar. ¿Abrir el borrador igualmente?',draftEditing:'Editando un borrador',newBlank:'Ficha en blanco',newBlankConfirm:'¿Vaciar la ficha? El borrador guardado no se modifica.',draftFail:'No hay espacio en el dispositivo para guardar el borrador.',draftNoProp:'Sin propiedad',draftEmpty:'La ficha está vacía: rellena algo antes de guardar el borrador.',
  needDate:'Indica la fecha.',noFuture:'La fecha no puede ser posterior a hoy.',needProp:(i,multi)=>multi?'Propiedad '+i+': indica la referencia o el nombre de la propiedad.':'Indica la referencia o el nombre de la propiedad.',
  ownerInc:i=>'Propiedad '+i+': completa el nombre y la firma del propietario, o quita su firma.',collabInc:'Completa el nombre y la firma del colaborador, o quita su firma.',collab2Inc:'Completa el nombre y la firma del segundo colaborador, o quítalo.',collab2IncP:i=>'Propiedad '+i+': completa el nombre y la firma del segundo colaborador, o quítalo.',collabIncP:i=>'Propiedad '+i+': completa el nombre y la firma del colaborador, o quita su firma.',
  needAgentSig:'Falta la firma del agente.',
@@ -184,6 +188,7 @@ en:{
  fr1C2:'By signing this document, the clients confirm that they have carried out the viewing of the property indicated above.',
  frNC2:'By signing this document, the clients confirm that they have carried out the viewings of all the properties indicated above.',
  save:'Save viewing',saving:'Saving…',saved:'Viewing saved.',
+ saveDraft:'Save draft',draftSaved:'Draft saved. You can prepare another one.',draftsT:n=>'Drafts ('+n+')',draftOpen:'Open',draftDelConfirm:'Delete this draft?',draftOpenConfirm:'The current form has unsaved data. Open the draft anyway?',draftEditing:'Editing a draft',newBlank:'Blank form',newBlankConfirm:'Clear the form? The saved draft is not changed.',draftFail:'There is no space on the device to save the draft.',draftNoProp:'No property',draftEmpty:'The form is empty: fill something in before saving the draft.',
  needDate:'Please enter the date.',noFuture:'The date cannot be later than today.',needProp:(i,multi)=>multi?'Property '+i+': enter the reference or the property name.':'Enter the reference or the property name.',
  ownerInc:i=>'Property '+i+': complete the owner name and signature, or remove the signature.',collabInc:'Complete the collaborator name and signature, or remove the signature.',collab2Inc:'Complete the second collaborator name and signature, or remove it.',collab2IncP:i=>'Property '+i+': complete the second collaborator name and signature, or remove it.',collabIncP:i=>'Property '+i+': complete the collaborator name and signature, or remove the signature.',
  needAgentSig:'The agent signature is missing.',
@@ -264,7 +269,9 @@ function pad(id){
   c.addEventListener('pointerdown',e=>{size();if(!w)return;d=true;c.setPointerCapture(e.pointerId);const p=pos(e);st=[[p[0]/w,p[1]/h]];strokes.push(st);x.beginPath();x.moveTo(...p)});
   c.addEventListener('pointermove',e=>{if(!d)return;const p=pos(e),q=st[st.length-1];ink+=Math.hypot(p[0]-q[0]*w,p[1]-q[1]*h);st.push([p[0]/w,p[1]/h]);x.lineTo(...p);x.stroke()});
   ['pointerup','pointercancel'].forEach(t=>c.addEventListener(t,()=>d=false));
-  pads[id]={init:size,clear(){strokes=[];st=null;ink=0;d=false;redraw()},empty:()=>ink<MIN_INK,off(){if(padRO)padRO.unobserve(c)},
+  pads[id]={init:size,clear(){strokes=[];st=null;ink=0;d=false;redraw()},empty:()=>ink<MIN_INK,
+    dump(){return strokes.length?{s:strokes.map(q=>q.map(([u,v])=>[Math.round(u*1e4)/1e4,Math.round(v*1e4)/1e4])),ink}:null},
+    load(o){strokes=(o&&o.s)||[];st=null;ink=(o&&o.ink)||0;d=false;redraw()},off(){if(padRO)padRO.unobserve(c)},
     /* Imagen de 300x100: se recorta al trazo y se encaja sin deformar (centrada, fondo transparente), redibujando los trazos */
     data(){
       const OW=300,OH=100,M=6,t=document.createElement('canvas');t.width=OW;t.height=OH;const o=t.getContext('2d');
@@ -605,7 +612,7 @@ function crmLine(v,own){
   if(c.status==='error')return`<div class="crm"><span class="erc">${esc(t('crmErr',c.message||''))}</span>${retry}</div>`;
   return`<div class="crm">${esc(t('crmWait'))}${retry}</div>`;
 }
-function render(){updPend();buildPer();buildAg();draw()}
+function render(){updPend();buildPer();buildAg();draw();renderDrafts()}
 /* La lista se pinta de PAGE en PAGE («Mostrar más»); el buscador espera a que se deje de escribir.
    Selección, contadores y PDF siguen usando todos los resultados filtrados. */
 const PAGE=30;let shown=PAGE,qT=null;
@@ -727,9 +734,60 @@ $('save').onclick=async()=>{
   }
   if(queued){pend.push(v);const ok=savePend();merge();render();msg(t(ok?'queued':'queuedMem'))}
   else{msg(t('saved'));crmSync(v.id,v)}
-  refreshDate();resetRows();clientCombo.reset();$('c').value='';delete $('c').dataset.cid;$('stc').innerHTML='';clr('sc');clr('sa');if(!$('cvw').hidden)togCollab();if(!$('c2w').hidden)togClient2();
+  if(curDraft){dropDraft(curDraft)}
+  clearForm();
   $('save').disabled=false;
 };
+function clearForm(){refreshDate();resetRows();clientCombo.reset();$('c').value='';delete $('c').dataset.cid;$('stc').innerHTML='';clr('sc');clr('sa');if(!$('cvw').hidden)togCollab();if(!$('c2w').hidden)togClient2();setDraft(null)}
+/* ===== Borradores: fichas a medio preparar, guardadas solo en este dispositivo y por usuario ===== */
+let curDraft=null;
+const loadDrafts=()=>{try{const a=JSON.parse(localStorage.getItem('borradores')||'null');return Array.isArray(a)?a:[]}catch(e){return[]}};
+const saveDrafts=a=>{try{if(a.length)localStorage.setItem('borradores',JSON.stringify(a));else localStorage.removeItem('borradores');return true}catch(e){return false}};
+function setDraft(id){curDraft=id;$('draftBar').hidden=!id}
+function sigState(w,n,p){return $(w).hidden?null:{name:$(n).value,pad:pads[p].dump()}}
+function formState(){
+  return{date:$('f').value,dateAuto:$('f').value===fAuto,
+    rows:rows.map(n=>({ref:$('r'+n).value,property:$('p'+n).value,pid:$('r'+n).dataset.pid||'',o:sigState('ow'+n,'on'+n,'os'+n),c:sigState('cw'+n,'cn'+n,'cs'+n),d:sigState('dw'+n,'dn'+n,'ds'+n)})),
+    client:$('c').value,cid:$('c').dataset.cid||'',clientSig:pads.sc.dump(),client2:sigState('c2w','c2','sc2'),agentSig:pads.sa.dump(),
+    collab:sigState('cvw','cvn','cvs'),collab2:sigState('cv2w','cv2n','cv2s')};
+}
+function formDirty(){const f=formState();return !!(f.client||f.clientSig||f.agentSig||f.client2||f.collab||f.rows.some(r=>r.ref||r.property||r.o||r.c))}
+function saveDraft(){
+  if(!me)return;if(!formDirty())return msg(t('draftEmpty'));
+  const a=loadDrafts(),st=formState(),id=curDraft||('d'+Date.now()),i=a.findIndex(x=>x.id===id);
+  const dr={id,uid:me.uid,updated:Date.now(),st};
+  if(i>=0)a[i]=dr;else a.push(dr);
+  if(!saveDrafts(a))return msg(t('draftFail'));
+  clearForm();renderDrafts();msg(t('draftSaved'));
+}
+function dropDraft(id){saveDrafts(loadDrafts().filter(x=>x.id!==id));if(curDraft===id)setDraft(null);renderDrafts()}
+function openDraft(id){
+  const dr=loadDrafts().find(x=>x.id===id);if(!dr)return;
+  if(curDraft!==id&&formDirty()&&!confirm(t('draftOpenConfirm')))return;
+  clearForm();const s=dr.st;
+  if(s.dateAuto){fAuto=hoy();$('f').value=fAuto}else $('f').value=s.date;
+  const setSig=(r,k,n)=>{if(!r)return;togSig(n,k);$(SG[k].n+n).value=r.name||'';pads[SG[k].p+n].load(r.pad)};
+  (s.rows||[]).forEach((r,i)=>{
+    if(i)addRow();const n=rows[i];
+    $('r'+n).value=r.ref||'';$('p'+n).value=r.property||'';if(r.pid)$('r'+n).dataset.pid=r.pid;linkNote(n);
+    setSig(r.o,'o',n);setSig(r.c,'c',n);if(r.c)setSig(r.d,'d',n);
+  });
+  $('c').value=s.client||'';if(s.cid&&s.client){$('c').dataset.cid=s.cid;$('stc').innerHTML='<span class="lk">✓ '+esc(t('linkedC'))+'</span>'}
+  pads.sc.load(s.clientSig);pads.sa.load(s.agentSig);
+  if(s.client2){togClient2();$('c2').value=s.client2.name||'';pads.sc2.load(s.client2.pad)}
+  if(s.collab){togCollab();$('cvn').value=s.collab.name||'';pads.cvs.load(s.collab.pad);if(s.collab2){togCollab2();$('cv2n').value=s.collab2.name||'';pads.cv2s.load(s.collab2.pad)}}
+  setDraft(id);msg('');renderDrafts();window.scrollTo(0,0);
+}
+function newBlank(){if(formDirty()&&!confirm(t('newBlankConfirm')))return;clearForm();msg('');renderDrafts()}
+function renderDrafts(){
+  const a=me?loadDrafts().filter(x=>x.uid===me.uid).sort((x,y)=>x.updated-y.updated):[];
+  $('drafts').hidden=!a.length;if(!a.length)return;
+  $('draftsT').textContent=t('draftsT',a.length);
+  $('draftList').innerHTML=a.map(dr=>{const s=dr.st,refs=(s.rows||[]).map(r=>r.ref||r.property).filter(Boolean).join(' · ')||t('draftNoProp');
+    return `<div class="row" style="border-top:1px solid var(--bd);padding:8px 0;margin-top:8px;gap:8px"><div><b>${esc(refs)}</b><div class="mu">${esc(fmt(s.dateAuto?hoy():s.date||hoy()))}${s.client?' · '+esc(s.client):''}${dr.id===curDraft?' · '+esc(t('draftEditing')):''}</div></div><div style="display:flex;gap:6px;flex:none"><button type="button" data-dact="open" data-id="${esc(dr.id)}">${esc(t('draftOpen'))}</button><button type="button" data-dact="del" data-id="${esc(dr.id)}">${esc(t('del'))}</button></div></div>`}).join('');
+}
+$('draftList').addEventListener('click',e=>{const b=e.target.closest('[data-dact]');if(!b)return;const id=b.dataset.id;
+  if(b.dataset.dact==='open')openDraft(id);else if(confirm(t('draftDelConfirm'))){if(id===curDraft)clearForm();dropDraft(id)}});
 /* Errores de conexión: se para y se reintenta más tarde. Cualquier otro error marca la visita (sendErr) y se sigue con las demás.
    Las visitas con error solo se reintentan con «Enviar ahora» (all=true) y una vez al abrir la app o iniciar sesión. */
 const NET_ERR=['timeout','unavailable','deadline-exceeded','unauthenticated'];let errRetried=false;
@@ -819,7 +877,7 @@ async function start(){
 }
 auth.onAuthStateChanged(u=>{
   if(unsub){unsub();unsub=null}
-  srv=[];visits=[];sel.clear();me=u;isSup=false;errRetried=false;shown=PAGE;
+  srv=[];visits=[];sel.clear();me=u;isSup=false;errRetried=false;shown=PAGE;setDraft(null);
   if(!u){$('q').value='';$('per').value='all';$('ag').value='all';show('auth');return}
   $('who').textContent=u.email;
   show('app');tab(1);checkLegacy();net();merge();render();start();
