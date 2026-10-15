@@ -121,6 +121,8 @@ const fmtDate = (d) => String(d || '').split('-').reverse().join('/');
 function buildNotes(v) {
   const lines = ['Viewing registered with the Prestige viewing log app. Date: ' + fmtDate(v.date) + '.'];
   if (v.client) lines.push('Client: ' + String(v.client).slice(0, 200));
+  // Second client: only in the notes (not linked as a contact)
+  if (v.client2) lines.push('Client 2: ' + String(v.client2).slice(0, 200));
   const props = (Array.isArray(v.props) ? v.props : [])
     .map((p) => [p.ref, p.property].filter(Boolean).join(' ').trim())
     .filter(Boolean);
