@@ -544,8 +544,17 @@ async function pdf(id,share){
     for(let k=1;k<=np;k++){d.setPage(k);d.setDrawColor(205);d.setLineWidth(0.2);d.line(15,282.5,195,282.5);d.text(d.splitTextToSize(T('legal',docL),180),15,286)}
     d.setTextColor(0);
     const data=d.output('arraybuffer');
-    const p0=getProps(list[0])[0];
-    const name=list.length===1?'visita-'+String(p0.ref||p0.property||list[0].date).replace(/[^\w-]+/g,'_')+'.pdf':'visitas.pdf';
+    // Nombre fecha-visita-referencia con la fecha en AAAA-MM-DD: así los archivos se ordenan solos por fecha
+    const san=s=>String(s||'').replace(/[^\w-]+/g,'_').replace(/^_+|_+$/g,'');
+    const dOf=v=>/^\d{4}-\d{2}-\d{2}$/.test(v.date)?v.date:hoy();
+    let name;
+    if(list.length===1){
+      const refs=[...new Set(getProps(list[0]).map(p=>san(p.ref||p.property)).filter(Boolean))];
+      name=(dOf(list[0])+'-visita'+(refs.length?'-'+refs.join('-'):'')).slice(0,150)+'.pdf';
+    }else{
+      const ds=list.map(dOf).sort(),a=ds[0],b=ds[ds.length-1];
+      name=(a===b?a:a+'_a_'+b)+'-visitas.pdf';
+    }
     const blob=new Blob([data],{type:'application/pdf'});
     if(warn)m.textContent=warn;
     if(share){
