@@ -23,7 +23,7 @@ Las credenciales de Respacio (`RESPACIO_BASIC`, `RESPACIO_API_KEY`) están en lo
 - **Propiedades privadas.** `searchProperties` envía `include_private=1` a `reference_no_suggestion` para incluir las
   propiedades privadas en la web (indicado por Respacio). Se despliega en la función `searchProperties`.
 
-- **Vincular después (pendiente de desplegar en `syncViewing`: `index.js` y `crm.js`).** Si una visita se guardó sin
+- **Vincular después (desplegado en `syncViewing`: `index.js` y `crm.js`).** Si una visita se guardó sin
   propiedad vinculada, el agente pulsa «Vincular con el CRM», elige la propiedad y `syncViewing` recibe
   `link: [{ i, id, ref }]`: guarda el vínculo en la visita y crea el evento. Solo el agente de la visita y solo si aún no
   tiene evento en el CRM.
