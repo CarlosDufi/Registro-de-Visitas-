@@ -134,11 +134,6 @@ function buildNotes(v) {
 }
 
 /*
- * Creates the "Viewing" event in the CRM (first time, add_viewing_feedback_event) or updates its notes
- * (when an event_id is already stored, update_viewing_event; it never creates a second event),
- * and stores the result in the visit document under "crm". Only the owner of the visit can trigger it.
- */
-/*
  * Links CRM properties to a visit that was saved without them (e.g. typed by name without signal).
  * link = [{ i: index of the property in the visit, id: CRM property id, ref: CRM reference number }].
  * Only while the visit has no CRM event yet and only on properties that are not linked.
@@ -161,6 +156,11 @@ function applyLink(v, link) {
   return { fields: { props, ref: props[0].ref || '', property: props[0].property || '' } };
 }
 
+/*
+ * Creates the "Viewing" event in the CRM (first time, add_viewing_feedback_event) or updates its notes
+ * (when an event_id is already stored, update_viewing_event; it never creates a second event),
+ * and stores the result in the visit document under "crm". Only the owner of the visit can trigger it.
+ */
 async function syncVisit({ db, visitId, uid, email, link, callFn, now, cfg }) {
   const c = cfg || CFG;
   const call_ = callFn || ((kind, params) => call(kind, params, { cfg: c }));
