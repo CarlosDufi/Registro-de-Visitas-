@@ -134,11 +134,34 @@ function buildNotes(v) {
 }
 
 /*
+ * Links CRM properties to a visit that was saved without them (e.g. typed by name without signal).
+ * link = [{ i: index of the property in the visit, id: CRM property id, ref: CRM reference number }].
+ * Only while the visit has no CRM event yet and only on properties that are not linked.
+ * Returns the fields to store, or { error }.
+ */
+function applyLink(v, link) {
+  if (v.crm && v.crm.eventId) return { error: 'failed-precondition' };
+  const props = (Array.isArray(v.props) && v.props.length ? v.props : [{ ref: v.ref || '', property: v.property || '' }])
+    .map((p) => ({ ...p }));
+  for (const l of link) {
+    const p = props[l.i];
+    if (!p || asId(p.crmPropertyId)) return { error: 'invalid-argument' };
+    p.crmPropertyId = l.id;
+    if (l.ref) {
+      // Same as choosing it from the dropdown: the reference becomes the CRM one, the typed text stays as the name
+      if (!p.property) p.property = p.ref || '';
+      p.ref = l.ref;
+    }
+  }
+  return { fields: { props, ref: props[0].ref || '', property: props[0].property || '' } };
+}
+
+/*
  * Creates the "Viewing" event in the CRM (first time, add_viewing_feedback_event) or updates its notes
  * (when an event_id is already stored, update_viewing_event; it never creates a second event),
  * and stores the result in the visit document under "crm". Only the owner of the visit can trigger it.
  */
-async function syncVisit({ db, visitId, uid, email, callFn, now, cfg }) {
+async function syncVisit({ db, visitId, uid, email, link, callFn, now, cfg }) {
   const c = cfg || CFG;
   const call_ = callFn || ((kind, params) => call(kind, params, { cfg: c }));
   const clock = now || Date.now;
@@ -147,16 +170,24 @@ async function syncVisit({ db, visitId, uid, email, callFn, now, cfg }) {
   const gate = await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
     if (!snap.exists) return { error: 'not-found' };
-    const v = snap.data();
+    let v = snap.data();
     if (v.agentUid !== uid) return { error: 'permission-denied' };
     const crm = v.crm || {};
+    let extra = {};
+    if (link && link.length) {
+      if (crm.status === 'syncing' && clock() - (crm.lockAt || 0) < 90000) return { busy: true };
+      const r = applyLink(v, link);
+      if (r.error) return { error: r.error };
+      extra = r.fields;
+      v = { ...v, ...extra };
+    }
     const ids = linkedProps(v);
     if (!ids.length) {
-      tx.update(ref, { crm: { status: 'skipped', message: 'No CRM property selected', updatedAt: clock() } });
+      tx.update(ref, { ...extra, crm: { status: 'skipped', message: 'No CRM property selected', updatedAt: clock() } });
       return { skipped: true };
     }
     if (crm.status === 'syncing' && clock() - (crm.lockAt || 0) < 90000) return { busy: true };
-    tx.update(ref, { crm: { ...crm, status: 'syncing', lockAt: clock() } });
+    tx.update(ref, { ...extra, crm: { ...crm, status: 'syncing', lockAt: clock() } });
     return { v, crm, ids };
   });
   if (gate.error) return { error: gate.error };
@@ -190,4 +221,4 @@ async function syncVisit({ db, visitId, uid, email, callFn, now, cfg }) {
   }
 }
 
-module.exports = { CFG, CrmError, encode, call, searchProperties, searchContacts, linkedProps, buildNotes, syncVisit };
+module.exports = { CFG, CrmError, encode, call, searchProperties, searchContacts, linkedProps, buildNotes, applyLink, syncVisit };

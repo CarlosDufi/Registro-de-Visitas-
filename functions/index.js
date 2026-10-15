@@ -46,6 +46,7 @@ exports.searchContacts = fn.https.onCall(async (data, ctx) => {
 });
 
 // Creates the "Viewing" event for a saved visit, or updates its notes if the event already exists.
+// With "link" it first links the CRM properties chosen by the agent (visits saved without a linked property).
 exports.syncViewing = fn.https.onCall(async (data, ctx) => {
   needAuth(ctx);
   const visitId = data && typeof data.visitId === 'string' ? data.visitId : '';
@@ -53,7 +54,16 @@ exports.syncViewing = fn.https.onCall(async (data, ctx) => {
   // The CRM user is the signed-in agent, taken from the login token (not from the request).
   const email = String((ctx.auth.token && ctx.auth.token.email) || '').toLowerCase();
   if (!email) throw new HttpsError('failed-precondition', 'The user has no email');
-  const r = await crm.syncVisit({ db, visitId, uid: ctx.auth.uid, email });
+  // Optional: link CRM properties to a visit saved without them ([{ i, id, ref }])
+  let link = null;
+  if (data && data.link !== undefined) {
+    const ok = Array.isArray(data.link) && data.link.length >= 1 && data.link.length <= 10 && data.link.every((l) =>
+      l && Number.isInteger(l.i) && l.i >= 0 && l.i < 10 && Number.isInteger(l.id) && l.id > 0 &&
+      (l.ref === undefined || (typeof l.ref === 'string' && l.ref.length <= 40)));
+    if (!ok || new Set(data.link.map((l) => l.i)).size !== data.link.length) throw new HttpsError('invalid-argument', 'Invalid link');
+    link = data.link.map((l) => ({ i: l.i, id: l.id, ref: String(l.ref || '').trim() }));
+  }
+  const r = await crm.syncVisit({ db, visitId, uid: ctx.auth.uid, email, link });
   if (r.error) throw new HttpsError(r.error, r.error);
   return r;
 });
