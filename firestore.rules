@@ -16,7 +16,8 @@ service cloud.firestore {
     function okProp(p) {
       return p is map
         && (!('ownerSig' in p) || isSig(p.ownerSig))
-        && (!('collabSig' in p) || isSig(p.collabSig));
+        && (!('collabSig' in p) || isSig(p.collabSig))
+        && (!('collab2Sig' in p) || isSig(p.collab2Sig));
     }
     // Hasta 10 propiedades por visita (las reglas no permiten recorrer listas)
     function okProps(ps) {
@@ -49,6 +50,8 @@ service cloud.firestore {
         && isSig(request.resource.data.agentSig)
         && optSig(request.resource.data, 'clientSig')
         && optSig(request.resource.data, 'collabSig')
+        && optSig(request.resource.data, 'collab2Sig')
+        && optSig(request.resource.data, 'client2Sig')
         && (!('props' in request.resource.data) || okProps(request.resource.data.props));
       allow delete: if signedIn() && resource.data.agentUid == request.auth.uid;
       allow update: if signedIn()

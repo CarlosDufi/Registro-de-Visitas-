@@ -92,10 +92,14 @@ button.p{background:var(--ac);color:var(--onac);width:100%;font-size:16px;margin
   <p class="legal" id="multiNote"></p>
   <label><span data-i="clientSig"></span> <span data-i="opt"></span></label><canvas id="sc"></canvas>
   <button type="button" onclick="clr('sc')" style="margin-top:6px" data-i="clearSig"></button>
+  <div><button type="button" id="c2b" onclick="togClient2()" style="margin-top:12px"></button></div>
+  <div id="c2w" hidden><label for="c2"><span data-i="client2"></span> <span data-i="opt"></span></label><input id="c2" autocomplete="off" autocapitalize="words"><label><span data-i="client2Sig"></span> <span data-i="opt"></span></label><canvas id="sc2"></canvas><button type="button" onclick="clr('sc2')" style="margin-top:6px" data-i="clearSig"></button></div>
   <label data-i="agentSig"></label><canvas id="sa"></canvas>
   <button type="button" onclick="clr('sa')" style="margin-top:6px" data-i="clearSig"></button>
   <div><button type="button" id="cvb" onclick="togCollab()" style="margin-top:12px"></button></div>
-  <div id="cvw" hidden><label for="cvn" data-i="collabName"></label><input id="cvn" autocomplete="off"><label data-i="collabSig"></label><canvas id="cvs"></canvas><button type="button" onclick="clr('cvs')" style="margin-top:6px" data-i="clearSig"></button></div>
+  <div id="cvw" hidden><label for="cvn" data-i="collabName"></label><input id="cvn" autocomplete="off"><label data-i="collabSig"></label><canvas id="cvs"></canvas><button type="button" onclick="clr('cvs')" style="margin-top:6px" data-i="clearSig"></button>
+  <div><button type="button" id="cv2b" onclick="togCollab2()" style="margin-top:12px"></button></div>
+  <div id="cv2w" hidden><label for="cv2n" data-i="collab2Name"></label><input id="cv2n" autocomplete="off"><label data-i="collab2Sig"></label><canvas id="cv2s"></canvas><button type="button" onclick="clr('cv2s')" style="margin-top:6px" data-i="clearSig"></button></div></div>
   <button class="p" id="save" data-i="save"></button>
   <div id="msg"></div>
 </div>
@@ -129,13 +133,17 @@ es:{
  date:'Fecha',props:'Propiedades visitadas',propHint:'Indica la referencia o el nombre de la propiedad (basta con uno de los dos).',addProp:'+ Añadir otra propiedad',prop:'Propiedad',remove:'Quitar',ref:'Nº referencia',propName:'Nombre de propiedad',
  ownerAdd:'+ Firma propietario',ownerRm:'Quitar firma propietario',ownerName:'Nombre del propietario',ownerSig:'Firma propietario',
  collabAdd:'+ Firma colaborador',collabRm:'Quitar firma colaborador',collabName:'Nombre del colaborador',collabSig:'Firma colaborador',
+ collab2Add:'+ Segundo colaborador',collab2Rm:'Quitar segundo colaborador',collab2Name:'Nombre del segundo colaborador',collab2Sig:'Firma segundo colaborador',collab2L:'Colaborador 2',
+ client2Add:'+ Segundo cliente',client2Rm:'Quitar segundo cliente',client2:'Nombre del segundo cliente',client2Sig:'Firma segundo cliente',client2L:'Cliente 2',
  clearSig:'Borrar firma',client:'Nombre cliente',clientSig:'Firma cliente',agentSig:'Firma agente',opt:'(opcional)',
  legal:LEGAL_ES,legalSign:'Al firmar, confirmo que he sido informado/a del tratamiento de mis datos personales.',
  fr1:'El cliente, al firmar este documento, confirma que ha realizado la visita a la propiedad indicada arriba.',
  frN:'El cliente, al firmar este documento, confirma que ha realizado las visitas a todas las propiedades indicadas arriba.',
+ fr1C2:'Los clientes, al firmar este documento, confirman que han realizado la visita a la propiedad indicada arriba.',
+ frNC2:'Los clientes, al firmar este documento, confirman que han realizado las visitas a todas las propiedades indicadas arriba.',
  save:'Guardar visita',saving:'Guardando…',saved:'Visita guardada.',
  needDate:'Indica la fecha.',noFuture:'La fecha no puede ser posterior a hoy.',needProp:(i,multi)=>multi?'Propiedad '+i+': indica la referencia o el nombre de la propiedad.':'Indica la referencia o el nombre de la propiedad.',
- ownerInc:i=>'Propiedad '+i+': completa el nombre y la firma del propietario, o quita su firma.',collabInc:'Completa el nombre y la firma del colaborador, o quita su firma.',collabIncP:i=>'Propiedad '+i+': completa el nombre y la firma del colaborador, o quita su firma.',
+ ownerInc:i=>'Propiedad '+i+': completa el nombre y la firma del propietario, o quita su firma.',collabInc:'Completa el nombre y la firma del colaborador, o quita su firma.',collab2Inc:'Completa el nombre y la firma del segundo colaborador, o quítalo.',collab2IncP:i=>'Propiedad '+i+': completa el nombre y la firma del segundo colaborador, o quítalo.',collabIncP:i=>'Propiedad '+i+': completa el nombre y la firma del colaborador, o quita su firma.',
  needAgentSig:'Falta la firma del agente.',
  queued:'Sin conexión suficiente: la visita queda guardada en este dispositivo y se enviará sola cuando haya señal. No borres los datos del navegador.',
  queuedMem:'No hay espacio en el dispositivo: la visita NO se ha podido guardar en él. Se enviará cuando haya señal, pero no cierres ni recargues la app hasta entonces.',
@@ -150,7 +158,7 @@ es:{
  fbTitle:'Valoración y feedback',fbPh:'Comentarios del cliente sobre la propiedad (opcional)',fbSave:'Guardar valoración y feedback',unsaved:'Cambios sin guardar',fbSaved:'Guardado',
  savedLocal:'Guardado en el dispositivo; se enviará con la visita.',savedMem:'No hay espacio en el dispositivo: se enviará con la visita si no cierras la app.',needOnline:'Necesitas conexión para guardar los cambios.',fbDenied:'No tienes permiso para editar esta visita.',fbFail:c=>'No se pudo guardar ('+c+').',
  noPdf:'No hay visitas que descargar.',pdfFont:'No se pudo cargar la fuente del PDF: algunos nombres pueden no verse bien.',pdfScript:'Algunos nombres usan un alfabeto que el PDF no puede mostrar (chino, árabe…). Escríbelos con letras latinas.',pdfLoad:'No se pudo cargar el generador de PDF.',pdfErr:'Error al generar el PDF.',
- pdfT1:'Ficha de visita',pdfTN:'Registro de visitas',gen:'Generado el',hDate:'FECHA',hClient:'CLIENTE',hAgent:'AGENTE',hProps:'PROPIEDADES VISITADAS',refP:'Ref.',pClientSig:'FIRMA CLIENTE',pAgentSig:'FIRMA AGENTE',pCollabSig:'FIRMA COLABORADOR',
+ pdfT1:'Ficha de visita',pdfTN:'Registro de visitas',gen:'Generado el',hDate:'FECHA',hClient:'CLIENTE',hAgent:'AGENTE',hProps:'PROPIEDADES VISITADAS',refP:'Ref.',pClientSig:'FIRMA CLIENTE',pClient2Sig:'FIRMA CLIENTE 2',pCollab2Sig:'FIRMA COLABORADOR 2',pAgentSig:'FIRMA AGENTE',pCollabSig:'FIRMA COLABORADOR',
  aBad:'Correo o contraseña incorrectos.',aMany:'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.',aNet:'Sin conexión. Inténtalo de nuevo.',aFail:'No se pudo iniciar sesión.',
  aEmpty:'Escribe tu correo y tu contraseña.',aMail:'Escribe tu correo arriba y pulsa de nuevo.',aReset:'Si el correo está dado de alta, recibirás un enlace para cambiar la contraseña.',aBadMail:'El correo no es válido. Revísalo.',aResetFail:'No se pudo enviar el enlace. Inténtalo de nuevo.',
  logoutConfirm:n=>'Hay '+n+' visita(s) pendiente(s) de enviar. Se enviarán cuando vuelvas a entrar con este usuario. ¿Salir ahora?',
@@ -167,13 +175,17 @@ en:{
  date:'Date',props:'Properties viewed',propHint:'Enter the reference or the property name (either one is enough).',addProp:'+ Add another property',prop:'Property',remove:'Remove',ref:'Reference no.',propName:'Property name',
  ownerAdd:'+ Owner signature',ownerRm:'Remove owner signature',ownerName:'Owner name',ownerSig:'Owner signature',
  collabAdd:'+ Collaborator signature',collabRm:'Remove collaborator signature',collabName:'Collaborator name',collabSig:'Collaborator signature',
+ collab2Add:'+ Second collaborator',collab2Rm:'Remove second collaborator',collab2Name:'Second collaborator name',collab2Sig:'Second collaborator signature',collab2L:'Collaborator 2',
+ client2Add:'+ Second client',client2Rm:'Remove second client',client2:'Second client name',client2Sig:'Second client signature',client2L:'Client 2',
  clearSig:'Clear signature',client:'Client name',clientSig:'Client signature',agentSig:'Agent signature',opt:'(optional)',
  legal:LEGAL_EN,legalSign:'By signing, I confirm that I have been informed of how my personal data will be processed.',
  fr1:'By signing this document, the client confirms that they have carried out the viewing of the property indicated above.',
  frN:'By signing this document, the client confirms that they have carried out the viewings of all the properties indicated above.',
+ fr1C2:'By signing this document, the clients confirm that they have carried out the viewing of the property indicated above.',
+ frNC2:'By signing this document, the clients confirm that they have carried out the viewings of all the properties indicated above.',
  save:'Save viewing',saving:'Saving…',saved:'Viewing saved.',
  needDate:'Please enter the date.',noFuture:'The date cannot be later than today.',needProp:(i,multi)=>multi?'Property '+i+': enter the reference or the property name.':'Enter the reference or the property name.',
- ownerInc:i=>'Property '+i+': complete the owner name and signature, or remove the signature.',collabInc:'Complete the collaborator name and signature, or remove the signature.',collabIncP:i=>'Property '+i+': complete the collaborator name and signature, or remove the signature.',
+ ownerInc:i=>'Property '+i+': complete the owner name and signature, or remove the signature.',collabInc:'Complete the collaborator name and signature, or remove the signature.',collab2Inc:'Complete the second collaborator name and signature, or remove it.',collab2IncP:i=>'Property '+i+': complete the second collaborator name and signature, or remove it.',collabIncP:i=>'Property '+i+': complete the collaborator name and signature, or remove the signature.',
  needAgentSig:'The agent signature is missing.',
  queued:'Not enough signal: the viewing is saved on this device and will be sent automatically when you have signal. Do not clear your browser data.',
  queuedMem:'There is no space left on the device: the viewing could NOT be saved on it. It will be sent when you have signal, but do not close or reload the app until then.',
@@ -188,7 +200,7 @@ en:{
  fbTitle:'Rating and feedback',fbPh:'Client comments about the property (optional)',fbSave:'Save rating and feedback',unsaved:'Unsaved changes',fbSaved:'Saved',
  savedLocal:'Saved on the device; it will be sent with the viewing.',savedMem:'No space left on the device: it will be sent with the viewing if you do not close the app.',needOnline:'You need a connection to save changes.',fbDenied:'You do not have permission to edit this viewing.',fbFail:c=>'Could not save ('+c+').',
  noPdf:'There are no viewings to download.',pdfFont:'Could not load the PDF font: some names may not display correctly.',pdfScript:'Some names use an alphabet the PDF cannot display (Chinese, Arabic…). Write them in Latin letters.',pdfLoad:'Could not load the PDF generator.',pdfErr:'Error generating the PDF.',
- pdfT1:'Viewing record',pdfTN:'Viewing log',gen:'Generated on',hDate:'DATE',hClient:'CLIENT',hAgent:'AGENT',hProps:'PROPERTIES VIEWED',refP:'Ref.',pClientSig:'CLIENT SIGNATURE',pAgentSig:'AGENT SIGNATURE',pCollabSig:'COLLABORATOR SIGNATURE',
+ pdfT1:'Viewing record',pdfTN:'Viewing log',gen:'Generated on',hDate:'DATE',hClient:'CLIENT',hAgent:'AGENT',hProps:'PROPERTIES VIEWED',refP:'Ref.',pClientSig:'CLIENT SIGNATURE',pClient2Sig:'CLIENT 2 SIGNATURE',pCollab2Sig:'COLLABORATOR 2 SIGNATURE',pAgentSig:'AGENT SIGNATURE',pCollabSig:'COLLABORATOR SIGNATURE',
  aBad:'Incorrect email or password.',aMany:'Too many attempts. Wait a few minutes and try again.',aNet:'No connection. Please try again.',aFail:'Could not sign in.',
  aEmpty:'Enter your email and password.',aMail:'Enter your email above and press again.',aReset:'If the email is registered, you will receive a link to change your password.',aBadMail:'The email address is not valid. Please check it.',aResetFail:'The link could not be sent. Please try again.',
  logoutConfirm:n=>n+' viewing(s) are waiting to be sent. They will be sent when you sign in again with this user. Log out now?',
@@ -266,11 +278,12 @@ function pad(id){
       return t.toDataURL('image/png');
     }};
 }
-pad('sc');pad('sa');pad('cvs');
+pad('sc');pad('sa');pad('cvs');pad('sc2');pad('cv2s');
 function nombre(e){const l=String(e||'').split('@')[0],f=l.split(/[._\-+0-9]+/).filter(Boolean)[0]||l;return f?f.charAt(0).toUpperCase()+f.slice(1).toLowerCase():'-'}
 function getProps(v){return Array.isArray(v.props)&&v.props.length?v.props:[{ref:v.ref,property:v.property}]}
 const lg=v=>v&&v.lang==='en'?'en':'es';
-const phraseOf=v=>T(getProps(v).length>1?'frN':'fr1',lg(v));
+const has2=v=>!!(v.client2||v.client2Sig);
+const phraseOf=v=>T((getProps(v).length>1?'frN':'fr1')+(has2(v)?'C2':''),lg(v));
 /* ===== Filas de propiedades ===== */
 /* ===== Respacio CRM (through Firebase functions) ===== */
 const FN_BASE='https://europe-west1-hoja-de-visitas.cloudfunctions.net/';
@@ -314,7 +327,7 @@ function combo(o){
   return{reset(){seq++;clearTimeout(timer);if(ctl)ctl.abort();say('',false);close()},say};
 }
 let rowSeq=0,rows=[];const rowCombo={};
-function renumber(){rows.forEach((n,i)=>{document.querySelector('#pr'+n+' .pn').textContent=i+1;document.querySelector('#pr'+n+' .rm').hidden=rows.length<2});$('multiNote').innerHTML='<b>'+esc(t(rows.length>1?'frN':'fr1'))+'</b>'}
+function renumber(){rows.forEach((n,i)=>{document.querySelector('#pr'+n+' .pn').textContent=i+1;document.querySelector('#pr'+n+' .rm').hidden=rows.length<2});$('multiNote').innerHTML='<b>'+esc(t((rows.length>1?'frN':'fr1')+($('c2w').hidden?'':'C2')))+'</b>'}
 function addRow(){
   const n=++rowSeq,b=document.createElement('div');b.className='prop';b.id='pr'+n;
   b.innerHTML=`<div class="row"><b class="mu"><span data-i="prop"></span> <span class="pn"></span></b><button type="button" class="rm" onclick="rmRow(${n})" data-i="remove"></button></div>
@@ -322,8 +335,10 @@ function addRow(){
   <label for="p${n}" data-i="propName"></label><input id="p${n}" autocomplete="off">
   <div class="btns"><button type="button" id="ob${n}" onclick="togSig(${n},'o')"></button><button type="button" id="cb${n}" onclick="togSig(${n},'c')"></button></div>
   <div id="ow${n}" hidden><label for="on${n}" data-i="ownerName"></label><input id="on${n}" autocomplete="off"><label data-i="ownerSig"></label><canvas id="os${n}"></canvas><button type="button" onclick="pads.os${n}.clear()" style="margin-top:6px" data-i="clearSig"></button></div>
-  <div id="cw${n}" hidden><label for="cn${n}" data-i="collabName"></label><input id="cn${n}" autocomplete="off"><label data-i="collabSig"></label><canvas id="cs${n}"></canvas><button type="button" onclick="pads.cs${n}.clear()" style="margin-top:6px" data-i="clearSig"></button></div>`;
-  $('props').appendChild(b);pad('os'+n);pad('cs'+n);rows.push(n);tr(b);sigBtn(n,'o');sigBtn(n,'c');renumber();
+  <div id="cw${n}" hidden><label for="cn${n}" data-i="collabName"></label><input id="cn${n}" autocomplete="off"><label data-i="collabSig"></label><canvas id="cs${n}"></canvas><button type="button" onclick="pads.cs${n}.clear()" style="margin-top:6px" data-i="clearSig"></button>
+  <div><button type="button" id="db${n}" onclick="togSig(${n},'d')" style="margin-top:12px"></button></div>
+  <div id="dw${n}" hidden><label for="dn${n}" data-i="collab2Name"></label><input id="dn${n}" autocomplete="off"><label data-i="collab2Sig"></label><canvas id="ds${n}"></canvas><button type="button" onclick="pads.ds${n}.clear()" style="margin-top:6px" data-i="clearSig"></button></div></div>`;
+  $('props').appendChild(b);pad('os'+n);pad('cs'+n);pad('ds'+n);rows.push(n);tr(b);sigBtn(n,'o');sigBtn(n,'c');sigBtn(n,'d');renumber();
   rowCombo[n]=combo({input:'r'+n,status:'st'+n,list:'sg'+n,fn:'searchProperties',
     render:it=>({title:it.reference_no+(it.title?' · '+it.title:'')}),
     onPick:it=>{$('r'+n).value=it.reference_no;if(it.title)$('p'+n).value=it.title;$('r'+n).dataset.pid=it.id;linkNote(n)},
@@ -345,17 +360,19 @@ async function linkProps(props){
   }));
 }
 function linkNote(n){const st=$('st'+n);if($('r'+n).dataset.pid){st.innerHTML='<span class="lk">✓ '+esc(t('linked'))+'</span>'}else st.innerHTML=''}
-function rmRow(n){if(rows.length<2)return;$('pr'+n).remove();['os','cs'].forEach(k=>{pads[k+n].off();delete pads[k+n]});rowCombo[n].reset();delete rowCombo[n];rows=rows.filter(x=>x!==n);renumber()}
-const SG={o:{w:'ow',p:'os',n:'on',b:'ob',add:'ownerAdd',rm:'ownerRm'},c:{w:'cw',p:'cs',n:'cn',b:'cb',add:'collabAdd',rm:'collabRm'}};
+function rmRow(n){if(rows.length<2)return;$('pr'+n).remove();['os','cs','ds'].forEach(k=>{pads[k+n].off();delete pads[k+n]});rowCombo[n].reset();delete rowCombo[n];rows=rows.filter(x=>x!==n);renumber()}
+const SG={o:{w:'ow',p:'os',n:'on',b:'ob',add:'ownerAdd',rm:'ownerRm'},c:{w:'cw',p:'cs',n:'cn',b:'cb',add:'collabAdd',rm:'collabRm'},d:{w:'dw',p:'ds',n:'dn',b:'db',add:'collab2Add',rm:'collab2Rm'}};
 function sigBtn(n,k){const s=SG[k];$(s.b+n).textContent=t($(s.w+n).hidden?s.add:s.rm)}
 function togSig(n,k){
   const s=SG[k],w=$(s.w+n),open=w.hidden;w.hidden=!open;
-  if(open)pads[s.p+n].init();else{pads[s.p+n].clear();$(s.n+n).value=''}
+  if(open)pads[s.p+n].init();else{pads[s.p+n].clear();$(s.n+n).value='';if(k==='c'&&!$('dw'+n).hidden)togSig(n,'d')}
   sigBtn(n,k);
 }
-function collabBtn(){$('cvb').textContent=t($('cvw').hidden?'collabAdd':'collabRm')}
-function togCollab(){const w=$('cvw'),open=w.hidden;w.hidden=!open;if(open)pads.cvs.init();else{pads.cvs.clear();$('cvn').value=''}collabBtn()}
-function resetRows(){$('props').innerHTML='';Object.keys(rowCombo).forEach(k=>{rowCombo[k].reset();delete rowCombo[k]});Object.keys(pads).filter(k=>/^(os|cs)\d/.test(k)).forEach(k=>{pads[k].off();delete pads[k]});rows=[];addRow()}
+function collabBtn(){$('cvb').textContent=t($('cvw').hidden?'collabAdd':'collabRm');$('cv2b').textContent=t($('cv2w').hidden?'collab2Add':'collab2Rm');$('c2b').textContent=t($('c2w').hidden?'client2Add':'client2Rm')}
+function togCollab(){const w=$('cvw'),open=w.hidden;w.hidden=!open;if(open)pads.cvs.init();else{pads.cvs.clear();$('cvn').value='';if(!$('cv2w').hidden)togCollab2()}collabBtn()}
+function togCollab2(){const w=$('cv2w'),open=w.hidden;w.hidden=!open;if(open)pads.cv2s.init();else{pads.cv2s.clear();$('cv2n').value=''}collabBtn()}
+function togClient2(){const w=$('c2w'),open=w.hidden;w.hidden=!open;if(open)pads.sc2.init();else{pads.sc2.clear();$('c2').value=''}collabBtn();renumber()}
+function resetRows(){$('props').innerHTML='';Object.keys(rowCombo).forEach(k=>{rowCombo[k].reset();delete rowCombo[k]});Object.keys(pads).filter(k=>/^(os|cs|ds)\d/.test(k)).forEach(k=>{pads[k].off();delete pads[k]});rows=[];addRow()}
 addRow();
 /* Respacio busca por nombre, apellido, nombre completo, móvil o correo y devuelve como máximo 20 contactos.
    Orden (sin distinguir tildes ni mayúsculas): primero los que contienen el texto tal cual, luego los que contienen
@@ -428,7 +445,7 @@ async function loadNoto(){
   return notoB64={n,b};
 }
 function pdfTexts(list){
-  const o=[];list.forEach(v=>{o.push(v.client,v.collabName,nombre(v.agentEmail));getProps(v).forEach(p=>o.push(p.ref,p.property,p.ownerName,p.collabName))});
+  const o=[];list.forEach(v=>{o.push(v.client,v.client2,v.collabName,v.collab2Name,nombre(v.agentEmail));getProps(v).forEach(p=>o.push(p.ref,p.property,p.ownerName,p.collabName,p.collab2Name))});
   return o.filter(Boolean).map(String).join(' ');
 }
 async function pdf(id,share){
@@ -452,12 +469,20 @@ async function pdf(id,share){
     const rule=c=>{d.setDrawColor(c||205);d.setLineWidth(0.2);d.line(15,y,195,y)};
     const label=(s,x)=>{d.setFontSize(7.5);d.setFont(undefined,'bold');d.setTextColor(120);d.text(s,x,y);d.setTextColor(0)};
     const ttl=(p,k)=>(k+1)+'.  '+(p.property||p.ref||'—');
+    const sigRows=(v,P)=>{
+      const cl=[{l:P('pClientSig'),s:v.clientSig,n:v.client}];if(has2(v))cl.push({l:P('pClient2Sig'),s:v.client2Sig,n:v.client2});
+      const ag=[{l:P('pAgentSig'),s:v.agentSig,n:nombre(v.agentEmail)}];
+      if(v.collabSig)ag.push({l:P('pCollabSig'),s:v.collabSig,n:v.collabName});
+      if(v.collab2Sig)ag.push({l:P('pCollab2Sig'),s:v.collab2Sig,n:v.collab2Name});
+      return cl.length+ag.length<=3?[cl.concat(ag)]:[cl,ag];
+    };
+    const pSigs=p=>[p.ownerSig,p.collabSig,p.collab2Sig].some(Boolean);
     const hSheet=v=>{
       const ps=getProps(v);let h=26;
       d.setFontSize(10);d.setFont(undefined,'bold');
-      ps.forEach((p,k)=>{h+=d.splitTextToSize(ttl(p,k),150).length*4.6+2+((p.ownerSig||p.collabSig)?27:0)+(k<ps.length-1?9:3)});
+      ps.forEach((p,k)=>{h+=d.splitTextToSize(ttl(p,k),150).length*4.6+2+(pSigs(p)?27:0)+(k<ps.length-1?9:3)});
       h+=7;
-      d.setFontSize(9);d.setFont(undefined,'bold');h+=d.splitTextToSize(phraseOf(v),180).length*4.6+46;
+      d.setFontSize(9);d.setFont(undefined,'bold');h+=d.splitTextToSize(phraseOf(v),180).length*4.6+46+(sigRows(v,k=>T(k,lg(v))).length-1)*39;
       return h;
     };
     list.forEach((v,vi)=>{
@@ -466,23 +491,24 @@ async function pdf(id,share){
       need(50);
       label(P('hDate'),15);label(P('hClient'),52);label(P('hAgent'),135);y+=4.8;
       d.setFontSize(10);d.setFont(undefined,'normal');
-      const cl=d.splitTextToSize(String(v.client||'—'),78).slice(0,2),ag=d.splitTextToSize(nombre(v.agentEmail),58).slice(0,2);
+      const cl=d.splitTextToSize(String(v.client||'—')+(v.client2?' / '+v.client2:''),78).slice(0,2),ag=d.splitTextToSize(nombre(v.agentEmail),58).slice(0,2);
       d.text(fmt(v.date),15,y);d.text(cl,52,y);d.text(ag,135,y);
       y+=Math.max(cl.length,ag.length)*4.6+2;rule();y+=7;
       label(P('hProps'),15);y+=6;
       ps.forEach((p,k)=>{
         d.setFontSize(10);d.setFont(undefined,'bold');
-        const nm=d.splitTextToSize(ttl(p,k),150),has=p.ownerSig||p.collabSig;
+        const nm=d.splitTextToSize(ttl(p,k),150),has=pSigs(p);
         need(nm.length*4.6+(has?34:8));
         d.text(nm,15,y);d.setFont(undefined,'normal');if(p.property&&p.ref)d.text(P('refP')+' '+p.ref,195,y,{align:'right'});y+=nm.length*4.6+2;
         if(has){
           const it=[];
           if(p.ownerSig)it.push({n:p.ownerName,s:p.ownerSig,a:P('ownerL')+':',b:P('ownerSig')});
           if(p.collabSig)it.push({n:p.collabName,s:p.collabSig,a:P('collabL')+':',b:P('collabSig')});
-          const y0=y;
+          if(p.collab2Sig)it.push({n:p.collab2Name,s:p.collab2Sig,a:P('collab2L')+':',b:P('collab2Sig')});
+          const y0=y,stp=it.length>2?60:90;
           it.forEach((o,i)=>{
-            const x=20+i*90;let yy=y0;
-            d.setFontSize(9);d.setFont(undefined,'normal');d.text(d.splitTextToSize(o.a+' '+(o.n||''),82)[0],x,yy);yy+=5;
+            const x=(it.length>2?15:20)+i*stp;let yy=y0;
+            d.setFontSize(9);d.setFont(undefined,'normal');d.text(d.splitTextToSize(o.a+' '+(o.n||''),stp-8)[0],x,yy);yy+=5;
             d.setFontSize(7.5);d.setTextColor(120);d.text(o.b,x,yy);d.setTextColor(0);yy+=1.5;
             if(sigOk(o.s)){try{d.addImage(o.s,'PNG',x,yy,50,16.7)}catch(e){}}
             yy+=17.5;d.setDrawColor(150);d.setLineWidth(0.2);d.line(x,yy,x+55,yy);
@@ -493,17 +519,18 @@ async function pdf(id,share){
       });
       rule();y+=7;
       d.setFontSize(9);d.setFont(undefined,'bold');
-      const pl=d.splitTextToSize(phraseOf(v),180),H=pl.length*4.6+46;
+      const SR=sigRows(v,P),pl=d.splitTextToSize(phraseOf(v),180),H=pl.length*4.6+46+(SR.length-1)*39;
       if(list.length===1){if(y+H>279){d.addPage();y=20}y=Math.max(y,279-H)}else need(H);
       rule(120);y+=7;
       d.setFontSize(9);d.setFont(undefined,'bold');d.text(pl,15,y);y+=pl.length*4.6+4;
-      const three=!!v.collabSig,cx=three?[15,78,141]:[15,110],iw=three?48:60,ih=iw/3,lw=three?50:75;
-      label(P('pClientSig'),cx[0]);label(P('pAgentSig'),cx[1]);if(three)label(P('pCollabSig'),cx[2]);y+=2;
-      if(sigOk(v.clientSig)){try{d.addImage(v.clientSig,'PNG',cx[0],y,iw,ih)}catch(e){}}
-      if(sigOk(v.agentSig)){try{d.addImage(v.agentSig,'PNG',cx[1],y,iw,ih)}catch(e){}}
-      if(three&&sigOk(v.collabSig)){try{d.addImage(v.collabSig,'PNG',cx[2],y,iw,ih)}catch(e){}}
-      y+=21;d.setDrawColor(150);d.setLineWidth(0.2);cx.forEach(x=>d.line(x,y,x+lw,y));y+=4.5;
-      d.setFontSize(8);d.setFont(undefined,'normal');d.text(String(v.client||''),cx[0],y);d.text(nombre(v.agentEmail),cx[1],y);if(three)d.text(d.splitTextToSize(String(v.collabName||''),55)[0],cx[2],y);y+=7;
+      SR.forEach((row,ri)=>{
+        if(ri)y+=4;
+        const three=row.length>2,cx=three?[15,78,141]:[15,110],iw=three?48:60,ih=iw/3,lw=three?50:75;
+        row.forEach((o,i)=>label(o.l,cx[i]));y+=2;
+        row.forEach((o,i)=>{if(sigOk(o.s)){try{d.addImage(o.s,'PNG',cx[i],y,iw,ih)}catch(e){}}});
+        y+=21;d.setDrawColor(150);d.setLineWidth(0.2);row.forEach((o,i)=>d.line(cx[i],y,cx[i]+lw,y));y+=4.5;
+        d.setFontSize(8);d.setFont(undefined,'normal');row.forEach((o,i)=>d.text(d.splitTextToSize(String(o.n||''),lw)[0]||'',cx[i],y));y+=7;
+      });
       if(vi<list.length-1){y+=3;d.setDrawColor(120);d.setLineWidth(0.6);d.line(15,y,195,y);d.setLineWidth(0.2);y+=10}
     });
     const np=d.getNumberOfPages();d.setFontSize(6);d.setTextColor(110);
@@ -594,7 +621,7 @@ function draw(){
   $('list').innerHTML=page.map(v=>{
     const ps=getProps(v),multi=ps.length>1,own=!!(me&&v.agentUid===me.uid),c=cur(v);
     const sg=(nm,sig,lab,cap)=>sig?`<div class="mu">${esc(t(lab))}: <b>${esc(nm||'')}</b></div><div class="sigs">${sigFig(sig,t(cap))}</div>`:'';
-    const plist=ps.map((p,k)=>`<div style="margin-top:6px"><span class="mu">${esc(t('propL'))}${multi?' '+(k+1):''}:</span> <b>${esc(p.property||p.ref||'—')}</b>${multi&&p.property&&p.ref?` <span class="mu">(Ref. ${esc(p.ref)})</span>`:''}${sg(p.ownerName,p.ownerSig,'ownerL','ownerSig')}${sg(p.collabName,p.collabSig,'collabL','collabSig')}</div>`).join('');
+    const plist=ps.map((p,k)=>`<div style="margin-top:6px"><span class="mu">${esc(t('propL'))}${multi?' '+(k+1):''}:</span> <b>${esc(p.property||p.ref||'—')}</b>${multi&&p.property&&p.ref?` <span class="mu">(Ref. ${esc(p.ref)})</span>`:''}${sg(p.ownerName,p.ownerSig,'ownerL','ownerSig')}${sg(p.collabName,p.collabSig,'collabL','collabSig')}${sg(p.collab2Name,p.collab2Sig,'collab2L','collab2Sig')}</div>`).join('');
     const refs=ps.map(p=>p.ref).filter(Boolean),head=refs.length?'Ref. '+refs.map(esc).join(' · '):ps.map(p=>esc(p.property||'—')).join(' · ');
     let fb='';
     if(own){
@@ -606,9 +633,9 @@ function draw(){
     }
     return `<div class="v"><div class="row"><label class="chk"><input type="checkbox" class="selv" data-id="${esc(v.id)}" ${sel.has(v.id)?'checked':''}><b>${head}</b>${pend.some(p=>p.id===v.id)?(v.sendErr?` <span style="color:#b3261e;font-size:12px">· ${esc(t('errTag',v.sendErr))}</span>`:` <span style="color:#b26a00;font-size:12px">· ${esc(t('pendTag'))}</span>`):''}</label><span class="mu">${esc(fmt(v.date))}</span></div>
   ${plist}
-  <div style="margin-top:6px"><span class="mu">${esc(t('clientL'))}:</span> <b>${v.client?esc(v.client):'—'}</b></div>
+  <div style="margin-top:6px"><span class="mu">${esc(t('clientL'))}:</span> <b>${v.client?esc(v.client):'—'}</b></div>${v.client2?`<div><span class="mu">${esc(t('client2L'))}:</span> <b>${esc(v.client2)}</b></div>`:''}
   <div><span class="mu">${esc(t('agentL'))}:</span> <b>${esc(nombre(v.agentEmail))}</b></div>
-  <div class="sigs">${v.clientSig?sigFig(v.clientSig,t('clientSig')):`<div class="mu" style="align-self:center">${esc(t('clientUnsigned'))}</div>`}${sigFig(v.agentSig,t('agentSig'))}${v.collabSig?sigFig(v.collabSig,t('collabSig'),v.collabName?' · '+esc(v.collabName):''):''}</div>
+  <div class="sigs">${v.clientSig?sigFig(v.clientSig,t('clientSig')):`<div class="mu" style="align-self:center">${esc(t('clientUnsigned'))}</div>`}${v.client2Sig?sigFig(v.client2Sig,t('client2Sig'),v.client2?' · '+esc(v.client2):''):''}${sigFig(v.agentSig,t('agentSig'))}${v.collabSig?sigFig(v.collabSig,t('collabSig'),v.collabName?' · '+esc(v.collabName):''):''}${v.collab2Sig?sigFig(v.collab2Sig,t('collab2Sig'),v.collab2Name?' · '+esc(v.collab2Name):''):''}</div>
   ${fb}
   ${crmLine(v,own)}
   <div class="acts"><button data-act="pdf" data-id="${esc(v.id)}">${esc(t('dlPdf'))}</button><button data-act="share" data-id="${esc(v.id)}">${esc(t('shPdf'))}</button>${own?`<button data-act="del" data-id="${esc(v.id)}">${esc(t('del'))}</button>`:''}</div></div>`}).join('');
@@ -661,12 +688,12 @@ $('save').onclick=async()=>{
     if(!ref&&!property)return msg(t('needProp',idx,rows.length>1));
     const p={ref,property};
     const pid=Number($('r'+n).dataset.pid);if(Number.isInteger(pid)&&pid>0)p.crmPropertyId=pid;
-    for(const k of ['o','c']){
+    for(const k of ['o','c','d']){
       const sg=SG[k];if($(sg.w+n).hidden)continue;
       const nm=$(sg.n+n).value.trim(),has=!pads[sg.p+n].empty();
       if(!nm&&!has)continue;
-      if(!nm||!has)return msg(t(k==='o'?'ownerInc':'collabIncP',idx));
-      if(k==='o'){p.ownerName=nm;p.ownerSig=pads['os'+n].data()}else{p.collabName=nm;p.collabSig=pads['cs'+n].data()}
+      if(!nm||!has)return msg(t({o:'ownerInc',c:'collabIncP',d:'collab2IncP'}[k],idx));
+      if(k==='o'){p.ownerName=nm;p.ownerSig=pads['os'+n].data()}else if(k==='c'){p.collabName=nm;p.collabSig=pads['cs'+n].data()}else{p.collab2Name=nm;p.collab2Sig=pads['ds'+n].data()}
     }
     props.push(p);
   }
@@ -679,6 +706,12 @@ $('save').onclick=async()=>{
     const cn=$('cvn').value.trim(),ch=!pads.cvs.empty();
     if(cn||ch){if(!cn||!ch)return msg(t('collabInc'));v.collabName=cn;v.collabSig=pads.cvs.data()}
   }
+  if(!$('cv2w').hidden){
+    const cn=$('cv2n').value.trim(),ch=!pads.cv2s.empty();
+    if(cn||ch){if(!cn||!ch)return msg(t('collab2Inc'));v.collab2Name=cn;v.collab2Sig=pads.cv2s.data()}
+  }
+  // Segundo cliente: nombre y firma opcionales; solo va a las notas del CRM y al PDF, sin vincular
+  if(!$('c2w').hidden){const c2=$('c2').value.trim();if(c2)v.client2=c2;if(!pads.sc2.empty())v.client2Sig=pads.sc2.data()}
   v.clientSig=pads.sc.empty()?'':pads.sc.data();v.agentSig=pads.sa.data();v.id='v'+Date.now();v.created=Date.now();
   v.agentUid=me.uid;v.agentEmail=(me.email||'').toLowerCase();
   $('save').disabled=true;msg(t('saving'));
@@ -694,7 +727,7 @@ $('save').onclick=async()=>{
   }
   if(queued){pend.push(v);const ok=savePend();merge();render();msg(t(ok?'queued':'queuedMem'))}
   else{msg(t('saved'));crmSync(v.id,v)}
-  refreshDate();resetRows();clientCombo.reset();$('c').value='';delete $('c').dataset.cid;$('stc').innerHTML='';clr('sc');clr('sa');if(!$('cvw').hidden)togCollab();
+  refreshDate();resetRows();clientCombo.reset();$('c').value='';delete $('c').dataset.cid;$('stc').innerHTML='';clr('sc');clr('sa');if(!$('cvw').hidden)togCollab();if(!$('c2w').hidden)togClient2();
   $('save').disabled=false;
 };
 /* Errores de conexión: se para y se reintenta más tarde. Cualquier otro error marca la visita (sendErr) y se sigue con las demás.
