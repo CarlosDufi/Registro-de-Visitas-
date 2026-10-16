@@ -31,7 +31,7 @@ table{width:100%;border-collapse:collapse;font-size:14px}th{text-align:left;colo
 .chk{display:flex;align-items:center;gap:10px;margin:0;font-size:16px;color:var(--tx);cursor:pointer}.chk input{width:22px;height:22px;padding:0;flex:none}
 .sigs{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px}.sigs figure{margin:0}.sigs img{height:64px;margin:0}.sigs figcaption{font-size:12px;color:var(--mu)}
 [hidden]{display:none!important}
-canvas{width:100%;height:130px;border:1px dashed var(--bd);border-radius:8px;background:#fff;touch-action:none;display:block}
+canvas{width:100%;height:130px;border:1px dashed var(--bd);border-radius:8px;background:#fff;touch-action:none;display:block;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 button{padding:10px 14px;border-radius:8px;border:1px solid var(--ac);background:transparent;color:var(--ac);font-size:14px;cursor:pointer}
 button.p{background:var(--ac);color:var(--onac);width:100%;font-size:16px;margin-top:16px}
 .row{display:flex;justify-content:space-between;align-items:center}
@@ -265,10 +265,22 @@ function pad(id){
   }
   function size(){const r=c.getBoundingClientRect();if(!r.width||(r.width===w&&r.height===h))return;w=r.width;h=r.height;c.width=Math.round(w*2);c.height=Math.round(h*2);redraw()}
   c._size=size;if(padRO)padRO.observe(c);
-  const pos=e=>{const r=c.getBoundingClientRect();return[e.clientX-r.left,e.clientY-r.top]};
-  c.addEventListener('pointerdown',e=>{size();if(!w)return;d=true;c.setPointerCapture(e.pointerId);const p=pos(e);st=[[p[0]/w,p[1]/h]];strokes.push(st);x.beginPath();x.moveTo(...p)});
-  c.addEventListener('pointermove',e=>{if(!d)return;const p=pos(e),q=st[st.length-1];ink+=Math.hypot(p[0]-q[0]*w,p[1]-q[1]*h);st.push([p[0]/w,p[1]/h]);x.lineTo(...p);x.stroke()});
-  ['pointerup','pointercancel'].forEach(t=>c.addEventListener(t,()=>d=false));
+  /* Firma fluida y sin cortes: solo cuenta el primer dedo (la palma u otro dedo no se mezclan en el trazo), se usan
+     también los puntos intermedios que el navegador agrupa cuando el móvil va cargado, se pinta solo el tramo nuevo
+     y se bloquean los gestos táctiles del navegador sobre el lienzo (en iPhone cortaban el trazo al empezar). */
+  let pid=null,r0=null;
+  const pos=e=>[e.clientX-r0.left,e.clientY-r0.top];
+  const end=e=>{if(e.pointerId===pid){d=false;pid=null}};
+  c.addEventListener('pointerdown',e=>{if(d)return;const ae=document.activeElement;if(ae&&ae!==document.body&&ae.blur)ae.blur();size();if(!w)return;d=true;pid=e.pointerId;try{c.setPointerCapture(pid)}catch(_){}r0=c.getBoundingClientRect();const p=pos(e);st=[[p[0]/w,p[1]/h]];strokes.push(st)});
+  c.addEventListener('pointermove',e=>{
+    if(!d||e.pointerId!==pid)return;
+    const evs=e.getCoalescedEvents?e.getCoalescedEvents():[];
+    const q=st[st.length-1];x.beginPath();x.moveTo(q[0]*w,q[1]*h);
+    for(const ev of evs.length?evs:[e]){const p=pos(ev),l=st[st.length-1];ink+=Math.hypot(p[0]-l[0]*w,p[1]-l[1]*h);st.push([p[0]/w,p[1]/h]);x.lineTo(...p)}
+    x.stroke();
+  });
+  ['pointerup','pointercancel','lostpointercapture'].forEach(t=>c.addEventListener(t,end));
+  ['touchstart','touchmove'].forEach(t=>c.addEventListener(t,e=>{if(e.cancelable)e.preventDefault()},{passive:false}));
   pads[id]={init:size,clear(){strokes=[];st=null;ink=0;d=false;redraw()},empty:()=>ink<MIN_INK,
     dump(){return strokes.length?{s:strokes.map(q=>q.map(([u,v])=>[Math.round(u*1e4)/1e4,Math.round(v*1e4)/1e4])),ink}:null},
     load(o){strokes=(o&&o.s)||[];st=null;ink=(o&&o.ink)||0;d=false;redraw()},off(){if(padRO)padRO.unobserve(c)},
