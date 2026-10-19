@@ -802,10 +802,60 @@ $('save').onclick=async()=>{
   $('save').disabled=false;
 };
 function clearForm(){refreshDate();resetRows();clientCombo.reset();$('c').value='';delete $('c').dataset.cid;$('stc').innerHTML='';clr('sc');clr('sa');if(!$('cvw').hidden)togCollab();if(!$('c2w').hidden)togClient2();setDraft(null)}
-/* ===== Borradores: fichas a medio preparar, guardadas solo en este dispositivo y por usuario ===== */
-let curDraft=null;
+/* ===== Borradores: fichas a medio preparar, por usuario ===== */
+/* Se guardan en el dispositivo (funcionan sin conexión) y se sincronizan con Firestore (colección «borradores»)
+   para verlos en todos los dispositivos del agente. Cada borrador lleva «updated»: si cambia en dos sitios, gana el
+   último guardado. «sync» marca los que ya están en el servidor; los demás se suben. Los borrados se apuntan en
+   «borradoresBorrar» hasta confirmarlos en el servidor. El contenido viaja como texto JSON (Firestore no admite
+   listas dentro de listas, como los trazos de las firmas). */
+let curDraft=null,draftUnsub=null,draftPushing=false;
+// Borradores que el servidor rechazó (no por conexión): no se reintentan hasta volver a abrir la app o cambiarlos
+const draftErr={};
 const loadDrafts=()=>{try{const a=JSON.parse(localStorage.getItem('borradores')||'null');return Array.isArray(a)?a:[]}catch(e){return[]}};
 const saveDrafts=a=>{try{if(a.length)localStorage.setItem('borradores',JSON.stringify(a));else localStorage.removeItem('borradores');return true}catch(e){return false}};
+const loadDDel=()=>{try{const a=JSON.parse(localStorage.getItem('borradoresBorrar')||'null');return Array.isArray(a)?a:[]}catch(e){return[]}};
+const saveDDel=a=>{try{if(a.length)localStorage.setItem('borradoresBorrar',JSON.stringify(a));else localStorage.removeItem('borradoresBorrar')}catch(e){}};
+function draftsListen(){
+  if(draftUnsub){draftUnsub();draftUnsub=null}
+  if(!me)return;const u=me;
+  draftUnsub=db.collection('borradores').where('uid','==',u.uid).onSnapshot(sn=>{
+    if(me!==u)return;
+    mergeDrafts(sn.docs.map(d=>({...d.data(),id:d.id})),!sn.metadata.fromCache);
+  },()=>{});
+}
+function mergeDrafts(server,complete){
+  const del=new Set(loadDDel().filter(x=>x.uid===me.uid).map(x=>x.id));
+  const a=loadDrafts(),others=a.filter(x=>x.uid!==me.uid),mine=new Map(a.filter(x=>x.uid===me.uid).map(x=>[x.id,x]));
+  for(const r of server){
+    if(del.has(r.id))continue;
+    let st;try{st=JSON.parse(r.st)}catch(e){continue}
+    const l=mine.get(r.id),up=Number(r.updated)||0;
+    if(!l||up>l.updated)mine.set(r.id,{id:r.id,uid:me.uid,updated:up,st,sync:true});
+    else if(up===l.updated)l.sync=true;
+  }
+  // Solo con la respuesta del servidor (no la caché): lo ya subido que falta allí se borró en otro dispositivo
+  if(complete){const ids=new Set(server.map(r=>r.id));for(const [id,l] of mine)if(l.sync&&!ids.has(id)){mine.delete(id);if(curDraft===id)setDraft(null)}}
+  saveDrafts([...others,...mine.values()]);renderDrafts();pushDrafts();
+}
+async function pushDrafts(){
+  if(draftPushing||!me||!navigator.onLine)return;
+  draftPushing=true;const u=me,col=db.collection('borradores');
+  try{
+    for(const x of loadDDel().filter(x=>x.uid===u.uid)){
+      try{await wt(col.doc(x.id).delete(),15000)}catch(e){if(NET_ERR.includes((e&&e.code)||''))return}
+      saveDDel(loadDDel().filter(y=>y.id!==x.id));
+    }
+    for(const l of loadDrafts().filter(x=>x.uid===u.uid&&!x.sync&&draftErr[x.id]!==x.updated)){
+      if(me!==u)return;
+      let err=null;
+      try{await wt(col.doc(l.id).set({uid:u.uid,updated:l.updated,st:JSON.stringify(l.st)}),15000)}
+      catch(e){const c=(e&&e.code)||'error';if(NET_ERR.includes(c))return;err=c}
+      // Se marca solo si nadie lo ha vuelto a guardar mientras se subía
+      const a=loadDrafts(),i=a.findIndex(y=>y.id===l.id);
+      if(err)draftErr[l.id]=l.updated;else if(i>=0&&a[i].updated===l.updated){a[i].sync=true;saveDrafts(a)}
+    }
+  }finally{draftPushing=false}
+}
 function setDraft(id){curDraft=id;$('draftBar').hidden=!id}
 function sigState(w,n,p){return $(w).hidden?null:{name:$(n).value,pad:pads[p].dump()}}
 function formState(){
@@ -817,13 +867,16 @@ function formState(){
 function formDirty(){const f=formState();return !!(f.client||f.clientSig||f.agentSig||f.client2||f.collab||f.rows.some(r=>r.ref||r.property||r.o||r.c))}
 function saveDraft(){
   if(!me)return;if(!formDirty())return msg(t('draftEmpty'));
-  const a=loadDrafts(),st=formState(),id=curDraft||('d'+Date.now()),i=a.findIndex(x=>x.id===id);
+  const a=loadDrafts(),st=formState(),id=curDraft||('d'+Date.now()+Math.random().toString(36).slice(2,6)),i=a.findIndex(x=>x.id===id);
   const dr={id,uid:me.uid,updated:Date.now(),st};
   if(i>=0)a[i]=dr;else a.push(dr);
   if(!saveDrafts(a))return msg(t('draftFail'));
-  clearForm();renderDrafts();msg(t('draftSaved'));
+  clearForm();renderDrafts();msg(t('draftSaved'));pushDrafts();
 }
-function dropDraft(id){saveDrafts(loadDrafts().filter(x=>x.id!==id));if(curDraft===id)setDraft(null);renderDrafts()}
+function dropDraft(id){
+  saveDrafts(loadDrafts().filter(x=>x.id!==id));if(curDraft===id)setDraft(null);renderDrafts();
+  if(me){const d=loadDDel();if(!d.some(x=>x.id===id)){d.push({id,uid:me.uid});saveDDel(d)}pushDrafts()}
+}
 function openDraft(id){
   const dr=loadDrafts().find(x=>x.id===id);if(!dr)return;
   if(curDraft!==id&&formDirty()&&!confirm(t('draftOpenConfirm')))return;
@@ -856,7 +909,7 @@ $('draftList').addEventListener('click',e=>{const b=e.target.closest('[data-dact
 const NET_ERR=['timeout','unavailable','deadline-exceeded','unauthenticated'];let errRetried=false;
 async function flush(all){
   if(flushing||!me||!navigator.onLine)return;
-  runDeletes();
+  runDeletes();pushDrafts();
   if(!errRetried){all=true;errRetried=true}
   flushing=true;
   try{
@@ -907,6 +960,7 @@ async function logout(){
   const n=me?pend.filter(p=>p.agentUid===me.uid).length:0;
   if(n&&!confirm(t('logoutConfirm',n)))return;
   if(unsub){unsub();unsub=null}
+  if(draftUnsub){draftUnsub();draftUnsub=null}
   try{await auth.signOut()}catch(e){}
   // Borra del dispositivo las visitas guardadas en caché (las pendientes de enviar se conservan aparte)
   if(persist){try{await db.terminate();await db.clearPersistence()}catch(e){}location.reload()}
@@ -936,10 +990,11 @@ async function start(){
   isSup=sup;$('who').textContent=u.email+(isSup?t('sup'):'');
   const col=db.collection('visits'),qy=isSup?col:col.where('agentUid','==',u.uid);
   unsub=qy.onSnapshot(s=>{srv=s.docs.map(d=>({...d.data(),id:d.id}));merge();render()},e=>{$('msg2').textContent=t('loadFail',e.code||'error')});
-  render();flush();
+  draftsListen();render();flush();
 }
 auth.onAuthStateChanged(u=>{
   if(unsub){unsub();unsub=null}
+  if(draftUnsub){draftUnsub();draftUnsub=null}
   srv=[];visits=[];sel.clear();me=u;isSup=false;errRetried=false;shown=PAGE;setDraft(null);
   if(!u){$('q').value='';$('per').value='all';$('ag').value='all';show('auth');return}
   $('who').textContent=u.email;

@@ -28,6 +28,9 @@ Las credenciales de Respacio (`RESPACIO_BASIC`, `RESPACIO_API_KEY`) están en lo
   `link: [{ i, id, ref }]`: guarda el vínculo en la visita y crea el evento. Solo el agente de la visita y solo si aún no
   tiene evento en el CRM.
 
+- **Borradores sincronizados (reglas de Firestore).** Los borradores se guardan en la colección `borradores`
+  (`uid`, `updated`, `st` = contenido en texto JSON, firmas incluidas). Cada agente solo lee y escribe los suyos.
+
 ## Pendiente
 
 - **Varias propiedades.** Con varias propiedades Respacio crea un evento por propiedad pero devuelve un solo `event_id`;
