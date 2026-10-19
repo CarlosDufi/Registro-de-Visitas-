@@ -37,6 +37,18 @@ service cloud.firestore {
       allow read: if signedIn() && myEmail() == email;
       allow write: if false;
     }
+    // Borradores: cada agente solo los suyos. El contenido es texto JSON (incluye los trazos de las firmas).
+    match /borradores/{id} {
+      allow read: if signedIn() && resource.data.uid == request.auth.uid;
+      allow create, update: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && (resource == null || resource.data.uid == request.auth.uid)
+        && request.resource.data.keys().hasOnly(['uid','updated','st'])
+        && request.resource.data.updated is int
+        && request.resource.data.st is string
+        && request.resource.data.st.size() < 900000;
+      allow delete: if signedIn() && (resource == null || resource.data.uid == request.auth.uid);
+    }
     match /visits/{id} {
       allow read: if signedIn() && (resource.data.agentUid == request.auth.uid || isSupervisor());
       // The "crm" field is written only by the Firebase function, never by the app.
