@@ -15,7 +15,7 @@ html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.4 system-ui,-apple-system,Segoe UI,sans-serif}
 main{max-width:640px;margin:0 auto;padding:16px}
-.logo{background:#fff;border:1px solid var(--bd);border-radius:12px;padding:16px;text-align:center;margin-bottom:8px}.logo img,.logo svg{max-width:260px;width:70%;height:auto}
+.logo{background:#fff;border:1px solid var(--bd);border-radius:12px;padding:16px;text-align:center;margin-bottom:8px}.logo img,.logo svg{max-width:260px;width:70%;height:auto}.logo.lw{padding:0;line-height:0;overflow:hidden}.logo.lw img{display:block;max-width:none;width:100%}
 h1{font-size:22px;margin:16px 0 16px;text-align:center}h2{font-size:17px;margin:24px 0 8px}
 .card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:16px;margin-bottom:12px}
 label{display:block;font-size:13px;color:var(--mu);margin:12px 0 4px}
@@ -259,7 +259,7 @@ function pad(id){
   /* Los trazos se guardan en coordenadas relativas (0..1) para poder redibujarlos si el lienzo cambia de tamaño (p. ej. al girar el móvil) */
   const c=$(id),x=c.getContext('2d');let d=false,ink=0,strokes=[],st=null,w=0,h=0;
   function redraw(){
-    x.setTransform(1,0,0,1,0,0);x.clearRect(0,0,c.width,c.height);x.setTransform(2,0,0,2,0,0);
+    x.setTransform(1,0,0,1,0,0);x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.setTransform(2,0,0,2,0,0);
     x.lineWidth=2;x.lineCap='round';x.lineJoin='round';x.strokeStyle='#111';
     strokes.forEach(s=>{x.beginPath();s.forEach(([u,v],i)=>i?x.lineTo(u*w,v*h):x.moveTo(u*w,v*h));x.stroke()});
   }
@@ -298,6 +298,9 @@ function pad(id){
     }};
 }
 pad('sc');pad('sa');pad('cvs');pad('sc2');pad('cv2s');
+/* Logo con su fondo blanco dentro de la imagen: el modo oscuro forzado de algunos navegadores (p. ej. Samsung Internet)
+   oscurece los fondos de la página, pero no el contenido de las imágenes. #logo se conserva (oculto) para el PDF. */
+(function(){const i=$('logo'),go=()=>{try{if(!i.naturalWidth)return;const P=Math.round(i.naturalWidth*0.2),c=document.createElement('canvas');c.width=i.naturalWidth+2*P;c.height=i.naturalHeight+Math.round(P*1.2);const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(i,P,Math.round(P*0.6));const v=new Image();v.alt=i.alt;v.src=c.toDataURL('image/png');i.after(v);i.hidden=true;i.parentNode.classList.add('lw')}catch(e){}};if(i.complete)go();else i.addEventListener('load',go)})();
 function nombre(e){const l=String(e||'').split('@')[0],f=l.split(/[._\-+0-9]+/).filter(Boolean)[0]||l;return f?f.charAt(0).toUpperCase()+f.slice(1).toLowerCase():'-'}
 function getProps(v){return Array.isArray(v.props)&&v.props.length?v.props:[{ref:v.ref,property:v.property}]}
 const lg=v=>v&&v.lang==='en'?'en':'es';
