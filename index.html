@@ -146,7 +146,7 @@ es:{
  frNC2:'Los clientes, al firmar este documento, confirman que han realizado las visitas a todas las propiedades indicadas arriba.',
  save:'Guardar visita',saving:'Guardando…',saved:'Visita guardada.',
  saveDraft:'Guardar borrador',draftSaved:'Borrador guardado. Puedes preparar otra ficha.',draftsT:n=>'Borradores ('+n+')',draftOpen:'Abrir',draftDelConfirm:'¿Eliminar este borrador?',draftOpenConfirm:'La ficha actual tiene datos sin guardar. ¿Abrir el borrador igualmente?',draftEditing:'Editando un borrador',newBlank:'Ficha en blanco',newBlankConfirm:'¿Vaciar la ficha? El borrador guardado no se modifica.',draftFail:'No hay espacio en el dispositivo para guardar el borrador.',draftNoProp:'Sin propiedad',draftEmpty:'La ficha está vacía: rellena algo antes de guardar el borrador.',
- needDate:'Indica la fecha.',noFuture:'La fecha no puede ser posterior a hoy.',needProp:(i,multi)=>multi?'Propiedad '+i+': indica la referencia o el nombre de la propiedad.':'Indica la referencia o el nombre de la propiedad.',
+ needDate:'Indica la fecha.',onlyToday:d=>'La visita solo se puede guardar con la fecha de hoy ('+d+'). Si es para otro día, guárdala como borrador.',needProp:(i,multi)=>multi?'Propiedad '+i+': indica la referencia o el nombre de la propiedad.':'Indica la referencia o el nombre de la propiedad.',
  ownerInc:i=>'Propiedad '+i+': completa el nombre y la firma del propietario, o quita su firma.',collabInc:'Completa el nombre y la firma del colaborador, o quita su firma.',collab2Inc:'Completa el nombre y la firma del segundo colaborador, o quítalo.',collab2IncP:i=>'Propiedad '+i+': completa el nombre y la firma del segundo colaborador, o quítalo.',collabIncP:i=>'Propiedad '+i+': completa el nombre y la firma del colaborador, o quita su firma.',
  needAgentSig:'Falta la firma del agente.',
  queued:'Sin conexión suficiente: la visita queda guardada en este dispositivo y se enviará sola cuando haya señal. No borres los datos del navegador.',
@@ -189,7 +189,7 @@ en:{
  frNC2:'By signing this document, the clients confirm that they have carried out the viewings of all the properties indicated above.',
  save:'Save viewing',saving:'Saving…',saved:'Viewing saved.',
  saveDraft:'Save draft',draftSaved:'Draft saved. You can prepare another one.',draftsT:n=>'Drafts ('+n+')',draftOpen:'Open',draftDelConfirm:'Delete this draft?',draftOpenConfirm:'The current form has unsaved data. Open the draft anyway?',draftEditing:'Editing a draft',newBlank:'Blank form',newBlankConfirm:'Clear the form? The saved draft is not changed.',draftFail:'There is no space on the device to save the draft.',draftNoProp:'No property',draftEmpty:'The form is empty: fill something in before saving the draft.',
- needDate:'Please enter the date.',noFuture:'The date cannot be later than today.',needProp:(i,multi)=>multi?'Property '+i+': enter the reference or the property name.':'Enter the reference or the property name.',
+ needDate:'Please enter the date.',onlyToday:d=>'The viewing can only be saved with today\'s date ('+d+'). If it is for another day, save it as a draft.',needProp:(i,multi)=>multi?'Property '+i+': enter the reference or the property name.':'Enter the reference or the property name.',
  ownerInc:i=>'Property '+i+': complete the owner name and signature, or remove the signature.',collabInc:'Complete the collaborator name and signature, or remove the signature.',collab2Inc:'Complete the second collaborator name and signature, or remove it.',collab2IncP:i=>'Property '+i+': complete the second collaborator name and signature, or remove it.',collabIncP:i=>'Property '+i+': complete the collaborator name and signature, or remove the signature.',
  needAgentSig:'The agent signature is missing.',
  queued:'Not enough signal: the viewing is saved on this device and will be sent automatically when you have signal. Do not clear your browser data.',
@@ -248,8 +248,9 @@ let persist=false;
 try{db.enablePersistence({synchronizeTabs:true}).then(()=>{persist=true}).catch(()=>{})}catch(e){}
 /* Fecha local del dispositivo (no UTC). La fecha propuesta se actualiza sola si no se ha cambiado a mano. */
 const hoy=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
-let fAuto=hoy();$('f').value=fAuto;$('f').max=fAuto;
-function refreshDate(){const h=hoy();if($('f').value===fAuto)$('f').value=h;fAuto=h;$('f').max=h}
+// Sin fecha máxima: los borradores pueden llevar fechas futuras; la visita solo se guarda con la fecha de hoy (ver Guardar)
+let fAuto=hoy();$('f').value=fAuto;
+function refreshDate(){const h=hoy();if($('f').value===fAuto)$('f').value=h;fAuto=h}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshDate()});
 const pads={};
 /* Longitud mínima de trazo (px de pantalla) para considerar que hay firma: un toque o un roce no cuenta */
@@ -773,7 +774,7 @@ $('save').onclick=async()=>{
   const v={date:$('f').value,client:$('c').value.trim(),props,ref:props[0].ref,property:props[0].property,rating:0,feedback:'',lang:LANG};
   const cid=Number($('c').dataset.cid);if(v.client&&Number.isInteger(cid)&&cid>0)v.clientId=cid;
   if(!v.date)return msg(t('needDate'));
-  if(v.date>hoy())return msg(t('noFuture'));
+  if(v.date!==hoy())return msg(t('onlyToday',fmt(hoy())));
   if(pads.sa.empty())return msg(t('needAgentSig'));
   if(!$('cvw').hidden){
     const cn=$('cvn').value.trim(),ch=!pads.cvs.empty();
