@@ -2,6 +2,8 @@
 /*
  * User management for administrators (Firebase Auth + Firestore roles).
  * Roles: agent (no document), supervisor (supervisores/{email}), admin (admins/{email} + supervisores/{email}).
+ * Names: Firebase Auth displayName, copied to usuarios/{email} {name} so every signed-in user can show it in viewings
+ * and PDFs (kept after deleting a user, so old viewings keep the name).
  * Every action checks that the caller is an admin. An admin cannot change their own role, disable or delete themselves,
  * so the app never runs out of administrators.
  */
@@ -36,6 +38,13 @@ async function setRole(db, email, role) {
   else { await adm.delete(); await sup.delete(); }
 }
 
+async function setName(db, email, name) {
+  const e = lower(email);
+  if (!e) return;
+  const ref = db.collection('usuarios').doc(e);
+  if (name) await ref.set({ name }, { merge: true }); else await ref.delete();
+}
+
 function authErr(e) {
   const c = (e && e.code) || '';
   if (c === 'auth/email-already-exists') return new UserError('already-exists', 'This email already has a user');
@@ -60,6 +69,13 @@ async function list(auth, db) {
     token = r.pageToken;
   } while (token);
   out.sort((a, b) => a.email.localeCompare(b.email));
+  // Keeps usuarios/{email} in step with the names in Auth (users created or renamed in the Firebase console)
+  const saved = {};
+  (await db.collection('usuarios').get()).docs.forEach((d) => { saved[d.id] = d.data().name || ''; });
+  for (const u of out) {
+    const e = lower(u.email);
+    if (e && (saved[e] || '') !== u.name) await setName(db, e, u.name);
+  }
   return out;
 }
 
@@ -82,6 +98,7 @@ async function manage({ auth, db, caller, data }) {
     let u;
     try { u = await auth.createUser({ email, password: d.password, displayName: name || undefined }); } catch (e) { throw authErr(e); }
     await setRole(db, email, role);
+    if (name) await setName(db, email, name);
     return { uid: u.uid };
   }
 
@@ -116,10 +133,11 @@ async function manage({ auth, db, caller, data }) {
     }
     if (Object.keys(upd).length) { try { await auth.updateUser(uid, upd); } catch (e) { throw authErr(e); } }
     if (d.role !== undefined) await setRole(db, u.email, d.role);
+    if (d.name !== undefined && u.email) await setName(db, u.email, cleanName(d.name));
     return { ok: true };
   }
 
   throw new UserError('invalid-argument', 'Unknown action');
 }
 
-module.exports = { ROLES, UserError, manage, isAdmin, roleOf, setRole };
+module.exports = { ROLES, UserError, manage, isAdmin, roleOf, setRole, setName };

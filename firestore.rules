@@ -42,6 +42,11 @@ service cloud.firestore {
       allow read: if signedIn() && myEmail() == email;
       allow write: if false;
     }
+    // Nombres de los usuarios (para visitas y PDF). Los escribe solo la función manageUsers.
+    match /usuarios/{email} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
     // Borradores: cada agente solo los suyos. El contenido es texto JSON (incluye los trazos de las firmas).
     match /borradores/{id} {
       allow read: if signedIn() && resource.data.uid == request.auth.uid;

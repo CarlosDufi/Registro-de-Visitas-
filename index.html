@@ -316,7 +316,20 @@ pad('sc');pad('sa');pad('cvs');pad('sc2');pad('cv2s');
 /* Logo con su fondo blanco dentro de la imagen: el modo oscuro forzado de algunos navegadores (p. ej. Samsung Internet)
    oscurece los fondos de la página, pero no el contenido de las imágenes. #logo se conserva (oculto) para el PDF. */
 (function(){const i=$('logo'),go=()=>{try{if(!i.naturalWidth)return;const P=Math.round(i.naturalWidth*0.2),c=document.createElement('canvas');c.width=i.naturalWidth+2*P;c.height=i.naturalHeight+Math.round(P*1.2);const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(i,P,Math.round(P*0.6));const v=new Image();v.alt=i.alt;v.src=c.toDataURL('image/png');i.after(v);i.hidden=true;i.parentNode.classList.add('lw')}catch(e){}};if(i.complete)go();else i.addEventListener('load',go)})();
-function nombre(e){const l=String(e||'').split('@')[0],f=l.split(/[._\-+0-9]+/).filter(Boolean)[0]||l;return f?f.charAt(0).toUpperCase()+f.slice(1).toLowerCase():'-'}
+/* Nombres puestos por el administrador (colección «usuarios», por email). Se guardan también en el dispositivo para
+   usarlos sin conexión. Sin nombre, se saca de la parte del email antes de la @. */
+let NAMES=(()=>{try{const o=JSON.parse(localStorage.getItem('nombres')||'null');return o&&typeof o==='object'?o:{}}catch(e){return{}}})(),namesUnsub=null;
+function namesListen(){
+  if(namesUnsub){namesUnsub();namesUnsub=null}
+  if(!me)return;
+  namesUnsub=db.collection('usuarios').onSnapshot(sn=>{
+    const m={};sn.docs.forEach(d=>{const n=d.data().name;if(typeof n==='string'&&n.trim())m[d.id.toLowerCase()]=n.trim()});
+    if(JSON.stringify(m)===JSON.stringify(NAMES))return;
+    NAMES=m;try{localStorage.setItem('nombres',JSON.stringify(m))}catch(e){}
+    render();
+  },()=>{});
+}
+function nombre(e){const k=String(e||'').trim().toLowerCase();if(NAMES[k])return NAMES[k];const l=String(e||'').split('@')[0],f=l.split(/[._\-+0-9]+/).filter(Boolean)[0]||l;return f?f.charAt(0).toUpperCase()+f.slice(1).toLowerCase():'-'}
 function getProps(v){return Array.isArray(v.props)&&v.props.length?v.props:[{ref:v.ref,property:v.property}]}
 const lg=v=>v&&v.lang==='en'?'en':'es';
 const has2=v=>!!(v.client2||v.client2Sig);
@@ -1033,6 +1046,7 @@ async function logout(){
   if(n&&!confirm(t('logoutConfirm',n)))return;
   if(unsub){unsub();unsub=null}
   if(draftUnsub){draftUnsub();draftUnsub=null}
+  if(namesUnsub){namesUnsub();namesUnsub=null}
   try{await auth.signOut()}catch(e){}
   // Borra del dispositivo las visitas guardadas en caché (las pendientes de enviar se conservan aparte)
   if(persist){try{await db.terminate();await db.clearPersistence()}catch(e){}location.reload()}
@@ -1067,11 +1081,12 @@ async function start(){
   isSup=sup;$('who').textContent=u.email+(isSup?t('sup'):'');
   const col=db.collection('visits'),qy=isSup?col:col.where('agentUid','==',u.uid);
   unsub=qy.onSnapshot(s=>{srv=s.docs.map(d=>({...d.data(),id:d.id}));merge();render()},e=>{$('msg2').textContent=t('loadFail',e.code||'error')});
-  draftsListen();render();flush();
+  draftsListen();namesListen();render();flush();
 }
 auth.onAuthStateChanged(u=>{
   if(unsub){unsub();unsub=null}
   if(draftUnsub){draftUnsub();draftUnsub=null}
+  if(namesUnsub){namesUnsub();namesUnsub=null}
   srv=[];visits=[];sel.clear();me=u;isSup=false;isAdm=false;adminUI();errRetried=false;shown=PAGE;setDraft(null);
   if(!u){$('q').value='';$('per').value='all';$('ag').value='all';show('auth');return}
   $('who').textContent=u.email;
