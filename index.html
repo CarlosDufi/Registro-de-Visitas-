@@ -326,9 +326,11 @@ function namesListen(){
     const m={};sn.docs.forEach(d=>{const n=d.data().name;if(typeof n==='string'&&n.trim())m[d.id.toLowerCase()]=n.trim()});
     if(JSON.stringify(m)===JSON.stringify(NAMES))return;
     NAMES=m;try{localStorage.setItem('nombres',JSON.stringify(m))}catch(e){}
-    render();
+    whoTxt();render();
   },()=>{});
 }
+// Cabecera: nombre (si lo puso el administrador) · email · rol
+function whoTxt(){if(!me)return;const n=NAMES[String(me.email||'').toLowerCase()];$('who').textContent=(n?n+' · ':'')+(me.email||'')+(isSup?t('sup'):'')}
 function nombre(e){const k=String(e||'').trim().toLowerCase();if(NAMES[k])return NAMES[k];const l=String(e||'').split('@')[0],f=l.split(/[._\-+0-9]+/).filter(Boolean)[0]||l;return f?f.charAt(0).toUpperCase()+f.slice(1).toLowerCase():'-'}
 function getProps(v){return Array.isArray(v.props)&&v.props.length?v.props:[{ref:v.ref,property:v.property}]}
 const lg=v=>v&&v.lang==='en'?'en':'es';
@@ -1078,7 +1080,7 @@ async function start(){
   catch(e){try{adm=(await ad.get({source:'cache'})).exists}catch(e2){}}
   if(me!==u)return;
   isAdm=adm;adminUI();
-  isSup=sup;$('who').textContent=u.email+(isSup?t('sup'):'');
+  isSup=sup;whoTxt();
   const col=db.collection('visits'),qy=isSup?col:col.where('agentUid','==',u.uid);
   unsub=qy.onSnapshot(s=>{srv=s.docs.map(d=>({...d.data(),id:d.id}));merge();render()},e=>{$('msg2').textContent=t('loadFail',e.code||'error')});
   draftsListen();namesListen();render();flush();
@@ -1089,7 +1091,7 @@ auth.onAuthStateChanged(u=>{
   if(namesUnsub){namesUnsub();namesUnsub=null}
   srv=[];visits=[];sel.clear();me=u;isSup=false;isAdm=false;adminUI();errRetried=false;shown=PAGE;setDraft(null);
   if(!u){$('q').value='';$('per').value='all';$('ag').value='all';show('auth');return}
-  $('who').textContent=u.email;
+  whoTxt();
   show('app');tab(1);checkLegacy();net();merge();render();start();
 });
 window.addEventListener('online',()=>{net();start()});
@@ -1102,7 +1104,7 @@ function applyLang(){
   $('legal').innerHTML=esc(t('legal')).replace('www.aepd.es','<a href="https://www.aepd.es" target="_blank" rel="noopener">www.aepd.es</a>')+'<br><b>'+esc(t('legalSign'))+'</b>';
   ['es','en'].forEach(l=>$('lg-'+l).classList.toggle('on',l===LANG));
   rows.forEach(n=>{sigBtn(n,'o');sigBtn(n,'c');linkNote(n)});if($('c').dataset.cid)$('stc').innerHTML='<span class="lk">✓ '+esc(t('linkedC'))+'</span>';collabBtn();renumber();
-  if(me){$('who').textContent=me.email+(isSup?t('sup'):'');checkLegacy()}
+  if(me){whoTxt();checkLegacy()}
   if(!$('t3').hidden&&uList.length)renderUsers();
   render();
 }
