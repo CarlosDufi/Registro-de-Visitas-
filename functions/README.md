@@ -5,8 +5,9 @@ Guardarlo aquí **no despliega nada**: las funciones y las reglas se siguen publ
 
 ## Contenido
 
-- `index.js`: funciones `searchProperties`, `searchContacts` y `syncViewing` (región `europe-west1`).
+- `index.js`: funciones `searchProperties`, `searchContacts`, `syncViewing` y `manageUsers` (región `europe-west1`).
 - `crm.js`: llamadas a la API de Respacio; creación y actualización del evento "Viewing" en el CRM.
+- `users.js`: gestión de usuarios para administradores (función `manageUsers`, página «Usuarios» del menú ☰).
 - `package.json`: dependencias (Node 22, `firebase-functions` 7, `firebase-admin` 13), copiado de la consola.
 - `../firestore.rules`: reglas de Firestore publicadas en la consola de Firebase.
 
@@ -30,6 +31,10 @@ Las credenciales de Respacio (`RESPACIO_BASIC`, `RESPACIO_API_KEY`) están en lo
 
 - **Borradores sincronizados (reglas de Firestore).** Los borradores se guardan en la colección `borradores`
   (`uid`, `updated`, `st` = contenido en texto JSON, firmas incluidas). Cada agente solo lee y escribe los suyos.
+
+- **Usuarios (función `manageUsers`).** Solo para administradores (colección `admins/{email}`; el primero se añade a mano
+  en la consola). Lista, crea, edita nombre, contraseña y rol (agente / supervisor / administrador), desactiva y borra.
+  Un administrador no puede cambiar su propio rol, desactivarse ni borrarse. Necesita `index.js`, `crm.js` y `users.js`.
 
 ## Pendiente
 

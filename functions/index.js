@@ -2,6 +2,7 @@
 const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const crm = require('./crm');
+const users = require('./users');
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -67,3 +68,19 @@ exports.syncViewing = fn.https.onCall(async (data, ctx) => {
   if (r.error) throw new HttpsError(r.error, r.error);
   return r;
 });
+
+// User management for administrators (the "Usuarios" page). No Respacio secrets needed.
+exports.manageUsers = functions
+  .region('europe-west1')
+  .runWith({ timeoutSeconds: 60, memory: '256MB' })
+  .https.onCall(async (data, ctx) => {
+    needAuth(ctx);
+    const caller = { uid: ctx.auth.uid, email: String((ctx.auth.token && ctx.auth.token.email) || '').toLowerCase() };
+    try {
+      return await users.manage({ auth: admin.auth(), db, caller, data });
+    } catch (e) {
+      if (e instanceof users.UserError) throw new HttpsError(e.code, e.message);
+      console.error('manageUsers error:', e && e.code, e && e.message);
+      throw new HttpsError('internal', 'Unexpected error');
+    }
+  });
