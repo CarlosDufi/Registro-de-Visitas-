@@ -38,6 +38,8 @@ Las credenciales de Respacio (`RESPACIO_BASIC`, `RESPACIO_API_KEY`) están en lo
   La consola ya no crea funciones de 1.ª generación, así que se despliega como **función de Cloud Run** (servicio
   `manageusers`, punto de entrada `manageUsers`) con la carpeta `manageUsers-run/` (`index.js`, `package.json` y una copia
   de `users.js`). Su dirección va en `FN_URL` de `index.html`.
+- **Nombres de los usuarios.** `manageUsers` copia el nombre de cada usuario a `usuarios/{email}` (al crear, al editar y al
+  abrir la página «Usuarios»). La app lo muestra en las visitas, el filtro de agentes y los PDF; sin nombre, usa el email.
 
 ## Pendiente
 
