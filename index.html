@@ -40,6 +40,11 @@ button.p{background:var(--ac);color:var(--onac);width:100%;font-size:16px;margin
 .mu{color:var(--mu);font-size:13px}
 .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 .legal{font-size:12px;color:var(--mu);line-height:1.45;margin:14px 0 4px}.legal a{color:var(--ac)}.legal b{color:var(--tx)}
+.menuw{position:relative;display:flex;gap:6px;flex:none}.menu{position:absolute;right:0;top:100%;margin-top:4px;background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:6px;display:flex;flex-direction:column;gap:6px;z-index:5;min-width:170px;box-shadow:0 4px 14px rgba(0,0,0,.15)}
+.ugrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin-top:8px}.ugrid input,.ugrid select{margin:0}
+.ut td{vertical-align:middle}.ut .ua{display:flex;gap:6px;flex-wrap:wrap}.ut .ua button{padding:6px 10px;font-size:13px}.ut .lnk{border:0;padding:0 0 0 6px;background:none;text-decoration:underline;font-size:13px}.ut select{width:auto;padding:6px 8px;margin:0}.ut .del{color:#b3261e;border-color:#b3261e}
+/* Una tarjeta por usuario (la app tiene ancho de móvil también en el ordenador) */
+.ut thead{display:none}.ut,.ut tbody,.ut tr,.ut td{display:block;width:100%}.ut tr{border:1px solid var(--bd);border-radius:10px;padding:8px 10px;margin-bottom:8px}.ut td{border:0;padding:3px 0}.ut td[data-l]::before{content:attr(data-l) ': ';color:var(--mu);font-size:12px}
 .userbar{margin:0 0 10px}.userbar .mu{margin-right:8px;overflow-wrap:anywhere}
 .prop{border:1px solid var(--bd);border-radius:10px;padding:4px 12px 12px;margin:10px 0}.prop .row{margin-top:10px}.prop .rm{padding:4px 10px;font-size:12px}
 #msg{color:var(--ac);font-size:14px;min-height:18px;margin-top:8px}
@@ -75,7 +80,7 @@ button.p{background:var(--ac);color:var(--onac);width:100%;font-size:16px;margin
 </div>
 </section>
 <div id="app" hidden>
-<div class="row userbar"><span class="mu" id="who"></span><button onclick="logout()" data-i="logout"></button></div>
+<div class="row userbar"><span class="mu" id="who"></span><span class="menuw"><button id="lo" onclick="logout()" data-i="logout"></button><button id="menuB" hidden onclick="togMenu()" aria-haspopup="true" style="font-size:18px;padding:6px 12px">☰</button><div id="menu" class="menu" hidden><button onclick="openUsers()" data-i="usersT"></button><button onclick="logout()" data-i="logout"></button></div></span></div>
 <p class="mu" id="net" hidden style="margin:0 0 8px" data-i="offline"></p>
 <div class="card" id="pend" hidden><b id="pendTxt"></b><p class="mu" style="margin:4px 0 0" data-i="pendSub"></p><p id="pendMem" style="margin:6px 0 0;color:#b3261e;font-weight:600" hidden></p><p id="pendErr" style="margin:6px 0 0;color:#b3261e;font-weight:600" hidden></p><div class="acts"><button onclick="flush(true)" data-i="sendNow"></button></div></div>
 <div class="card" id="legacy" hidden><b data-i="legacyT"></b><p class="mu" id="legacyTxt"></p><div class="acts"><button onclick="uploadLegacy()" data-i="legacyUp"></button><button onclick="dropLegacy()" data-i="legacyDrop"></button></div></div>
@@ -106,6 +111,13 @@ button.p{background:var(--ac);color:var(--onac);width:100%;font-size:16px;margin
   <button type="button" id="saveDraft" onclick="saveDraft()" style="width:100%;margin-top:8px" data-i="saveDraft"></button>
   <div id="msg"></div>
 </div>
+</section>
+<section id="t3" hidden>
+<div class="row" style="margin-bottom:10px"><h2 style="margin:0" data-i="usersT"></h2><button onclick="tab(1)" data-i="back"></button></div>
+<div class="card"><b data-i="nuT"></b><p class="mu" style="margin:4px 0 0" data-i="rolesHelp"></p>
+<div class="ugrid"><input id="nuE" type="email" autocomplete="off" autocapitalize="off" data-ph="uEmail"><input id="nuN" autocomplete="off" autocapitalize="words" data-ph="uName"><input id="nuP" type="text" autocomplete="new-password" autocapitalize="off" data-ph="nuPass"><select id="nuR"><option value="agent" data-i="rAgent"></option><option value="supervisor" data-i="rSup"></option><option value="admin" data-i="rAdmin"></option></select><button type="button" id="nuGo" onclick="createUser()" style="background:var(--ac);color:var(--onac)" data-i="nuGo"></button></div>
+<div id="numsg" class="mu" style="min-height:18px;margin-top:8px"></div></div>
+<div class="card"><b data-i="usersT"></b><div id="umsg" class="mu" style="min-height:18px;margin:6px 0"></div><div id="ulist"></div></div>
 </section>
 <section id="t2" hidden>
 <div class="row" style="margin-top:8px;gap:8px"><h2 style="margin:0" data-i="allV"></h2><button id="pdfbtn" onclick="pdf()"></button></div>
@@ -157,7 +169,7 @@ es:{
  months:['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'],allAgents:'Todos los agentes',
  selAll:'Seleccionar todas',cnt:n=>n+' hojas',cntF:(a,b)=>a+' de '+b+' hojas',empty:'Aún no hay visitas.',noMatch:'No hay visitas que coincidan con la búsqueda.',more:n=>'Mostrar más ('+n+' restantes)',
  propL:'Propiedad',ownerL:'Propietario',collabL:'Colaborador',clientL:'Cliente',agentL:'Agente',pendTag:'pendiente de enviar',errTag:c=>'error al enviar ('+c+')',dlPdf:'Descargar PDF',shPdf:'Compartir PDF',searching:'Buscando en el CRM…',noResults:'Sin resultados en el CRM. Puedes escribirlo a mano.',cbError:'No se pudo consultar el CRM. Puedes escribirlo a mano.',cbOffline:'Sin conexión: escríbelo a mano.',linked:'Vinculada al CRM',linkedC:'Cliente vinculado al CRM',
- crmOk:n=>'CRM: evento '+(n?'#'+n:'creado'),crmSyncing:'CRM: enviando…',crmStuck:'CRM: el envío no terminó',crmErr:m=>'CRM: error. '+m,crmSkip:'CRM: sin propiedad vinculada',linkBtn:'Vincular con el CRM',linkHint:'Busca cada propiedad por referencia o nombre y elígela de la lista.',linkGo:'Vincular y enviar al CRM',linkCancel:'Cancelar',linkNone:'Elige al menos una propiedad de la lista.',linkSending:'Vinculando…',linkFail:c=>'No se pudo vincular ('+c+').',linkHas:'Esta visita ya tiene un evento en el CRM.',crmWait:'CRM: pendiente de enviar',crmRetry:'Reintentar',crmBusy:'CRM: ya se está enviando…',shUnsupported:'Este dispositivo no permite compartir el PDF desde aquí; se ha descargado.',del:'Eliminar',
+ crmOk:n=>'CRM: evento '+(n?'#'+n:'creado'),crmSyncing:'CRM: enviando…',crmStuck:'CRM: el envío no terminó',crmErr:m=>'CRM: error. '+m,crmSkip:'CRM: sin propiedad vinculada',linkBtn:'Vincular con el CRM',usersT:'Usuarios',back:'← Volver',nuT:'Nuevo usuario',rolesHelp:'Agente: registra sus visitas · Supervisor: además ve las visitas de todos · Administrador: además gestiona usuarios.',nuPass:'Contraseña inicial (mín. 8)',nuGo:'Crear usuario',rAgent:'Agente',rSup:'Supervisor',rAdmin:'Administrador',uEmail:'Email',uName:'Nombre',uRole:'Rol',uLast:'Último acceso',uState:'Estado',uActive:'Activo',uOff:'Desactivado',uYou:'(tú)',uEdit:'Editar',uPass:'Cambiar contraseña',uDisable:'Desactivar',uEnable:'Reactivar',uDel:'Borrar',uNever:'Nunca',uLoading:'Cargando…',uSaved:'Cambios guardados.',uCreated:e=>'Usuario creado: '+e+'. Ya puede entrar con la contraseña inicial.',uNameP:e=>'Nombre de '+e+':',uPassP:e=>'Nueva contraseña para '+e+' (mínimo 8 caracteres):',uShort:'La contraseña debe tener al menos 8 caracteres.',uBadEmail:'Escribe un email válido.',uDisC:e=>'¿Desactivar a '+e+'? No podrá entrar en la app hasta que lo reactives.',uEnC:e=>'¿Reactivar a '+e+'?',uDelC:e=>'¿Borrar el usuario '+e+'? No se puede deshacer. Sus visitas se conservan.',uRoleC:(e,r)=>'¿Cambiar el rol de '+e+' a '+r+'?',uDenied:'Solo los administradores pueden gestionar usuarios.',uExists:'Ya existe un usuario con ese email.',uInvalid:'Datos no válidos: revisa el email y la contraseña.',uSelf:'No puedes cambiar tu propio rol, desactivarte ni borrarte.',uNotFound:'El usuario ya no existe.',uFail:c=>'No se pudo completar ('+c+'). Comprueba la conexión e inténtalo de nuevo.',linkHint:'Busca cada propiedad por referencia o nombre y elígela de la lista.',linkGo:'Vincular y enviar al CRM',linkCancel:'Cancelar',linkNone:'Elige al menos una propiedad de la lista.',linkSending:'Vinculando…',linkFail:c=>'No se pudo vincular ('+c+').',linkHas:'Esta visita ya tiene un evento en el CRM.',crmWait:'CRM: pendiente de enviar',crmRetry:'Reintentar',crmBusy:'CRM: ya se está enviando…',shUnsupported:'Este dispositivo no permite compartir el PDF desde aquí; se ha descargado.',del:'Eliminar',
  delConfirm:'¿Eliminar esta visita?',delFail:c=>'No se pudo eliminar ('+c+').',clientUnsigned:'Firma cliente: sin firmar',sigBad:c=>c+': no válida',
  fbTitle:'Valoración y feedback',fbPh:'Comentarios del cliente sobre la propiedad (opcional)',fbSave:'Guardar valoración y feedback',unsaved:'Cambios sin guardar',fbSaved:'Guardado',
  savedLocal:'Guardado en el dispositivo; se enviará con la visita.',savedMem:'No hay espacio en el dispositivo: se enviará con la visita si no cierras la app.',needOnline:'Necesitas conexión para guardar los cambios.',fbDenied:'No tienes permiso para editar esta visita.',fbFail:c=>'No se pudo guardar ('+c+').',
@@ -200,7 +212,7 @@ en:{
  months:['January','February','March','April','May','June','July','August','September','October','November','December'],allAgents:'All agents',
  selAll:'Select all',cnt:n=>n+' sheets',cntF:(a,b)=>a+' of '+b+' sheets',empty:'No viewings yet.',noMatch:'No viewings match your search.',more:n=>'Show more ('+n+' remaining)',
  propL:'Property',ownerL:'Owner',collabL:'Collaborator',clientL:'Client',agentL:'Agent',pendTag:'waiting to be sent',errTag:c=>'sending failed ('+c+')',dlPdf:'Download PDF',shPdf:'Share PDF',searching:'Searching the CRM…',noResults:'No results in the CRM. You can type it manually.',cbError:'Could not reach the CRM. You can type it manually.',cbOffline:'No connection: type it manually.',linked:'Linked to the CRM',linkedC:'Client linked to the CRM',
- crmOk:n=>'CRM: event '+(n?'#'+n:'created'),crmSyncing:'CRM: sending…',crmStuck:'CRM: sending did not finish',crmErr:m=>'CRM error: '+m,crmSkip:'CRM: no linked property',linkBtn:'Link to CRM',linkHint:'Search each property by reference or name and pick it from the list.',linkGo:'Link and send to CRM',linkCancel:'Cancel',linkNone:'Pick at least one property from the list.',linkSending:'Linking…',linkFail:c=>'Could not link ('+c+').',linkHas:'This visit already has a CRM event.',crmWait:'CRM: waiting to be sent',crmRetry:'Retry',crmBusy:'CRM: already sending…',shUnsupported:'This device cannot share the PDF from here; it has been downloaded instead.',del:'Delete',
+ crmOk:n=>'CRM: event '+(n?'#'+n:'created'),crmSyncing:'CRM: sending…',crmStuck:'CRM: sending did not finish',crmErr:m=>'CRM error: '+m,crmSkip:'CRM: no linked property',linkBtn:'Link to CRM',usersT:'Users',back:'← Back',nuT:'New user',rolesHelp:'Agent: records their viewings · Supervisor: also sees everyone\'s viewings · Administrator: also manages users.',nuPass:'Initial password (min. 8)',nuGo:'Create user',rAgent:'Agent',rSup:'Supervisor',rAdmin:'Administrator',uEmail:'Email',uName:'Name',uRole:'Role',uLast:'Last sign-in',uState:'Status',uActive:'Active',uOff:'Disabled',uYou:'(you)',uEdit:'Edit',uPass:'Change password',uDisable:'Disable',uEnable:'Enable',uDel:'Delete',uNever:'Never',uLoading:'Loading…',uSaved:'Changes saved.',uCreated:e=>'User created: '+e+'. They can sign in with the initial password.',uNameP:e=>'Name for '+e+':',uPassP:e=>'New password for '+e+' (at least 8 characters):',uShort:'The password must have at least 8 characters.',uBadEmail:'Enter a valid email.',uDisC:e=>'Disable '+e+'? They will not be able to sign in until you enable them again.',uEnC:e=>'Enable '+e+'?',uDelC:e=>'Delete the user '+e+'? This cannot be undone. Their viewings are kept.',uRoleC:(e,r)=>'Change the role of '+e+' to '+r+'?',uDenied:'Only administrators can manage users.',uExists:'A user with that email already exists.',uInvalid:'Invalid data: check the email and the password.',uSelf:'You cannot change your own role, disable or delete yourself.',uNotFound:'The user no longer exists.',uFail:c=>'Could not complete it ('+c+'). Check the connection and try again.',linkHint:'Search each property by reference or name and pick it from the list.',linkGo:'Link and send to CRM',linkCancel:'Cancel',linkNone:'Pick at least one property from the list.',linkSending:'Linking…',linkFail:c=>'Could not link ('+c+').',linkHas:'This visit already has a CRM event.',crmWait:'CRM: waiting to be sent',crmRetry:'Retry',crmBusy:'CRM: already sending…',shUnsupported:'This device cannot share the PDF from here; it has been downloaded instead.',del:'Delete',
  delConfirm:'Delete this viewing?',delFail:c=>'Could not delete ('+c+').',clientUnsigned:'Client signature: not signed',sigBad:c=>c+': invalid',
  fbTitle:'Rating and feedback',fbPh:'Client comments about the property (optional)',fbSave:'Save rating and feedback',unsaved:'Unsaved changes',fbSaved:'Saved',
  savedLocal:'Saved on the device; it will be sent with the viewing.',savedMem:'No space left on the device: it will be sent with the viewing if you do not close the app.',needOnline:'You need a connection to save changes.',fbDenied:'You do not have permission to edit this viewing.',fbFail:c=>'Could not save ('+c+').',
@@ -431,7 +443,7 @@ function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;',
 const SIG_RE=/^data:image\/png;base64,[A-Za-z0-9+/=]+$/;
 const sigOk=s=>typeof s==='string'&&SIG_RE.test(s);
 const sigFig=(sig,cap,extra)=>sigOk(sig)?`<figure><img src="${sig}" alt="${esc(cap)}"><figcaption>${esc(cap)}${extra||''}</figcaption></figure>`:`<div class="mu" style="align-self:center">${esc(t('sigBad',cap))}</div>`;
-function tab(n){$('t1').hidden=n!==1;$('t2').hidden=n!==2;$('b1').classList.toggle('on',n===1);$('b2').classList.toggle('on',n===2);if(n===1){refreshDate();Object.values(pads).forEach(p=>p.init())}}
+function tab(n){$('t1').hidden=n!==1;$('t2').hidden=n!==2;$('t3').hidden=n!==3;$('b1').classList.toggle('on',n===1);$('b2').classList.toggle('on',n===2);if(n===1){refreshDate();Object.values(pads).forEach(p=>p.init())}}
 const fmt=d=>d.split('-').reverse().join('/');
 const sorted=()=>[...visits].sort((a,b)=>b.date.localeCompare(a.date)||b.created-a.created);
 const norm=s=>String(s).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
@@ -934,6 +946,57 @@ async function flush(all){
     }
   }finally{flushing=false}
 }
+/* ===== Usuarios (solo administradores): llama a la función manageUsers ===== */
+let isAdm=false,uList=[];
+function adminUI(){$('menuB').hidden=!isAdm;$('lo').hidden=isAdm;$('menu').hidden=true;if(!isAdm&&!$('t3').hidden)tab(1)}
+function togMenu(){$('menu').hidden=!$('menu').hidden}
+document.addEventListener('click',e=>{if(!e.target.closest('#menu,#menuB'))$('menu').hidden=true});
+function openUsers(){$('menu').hidden=true;tab(3);window.scrollTo(0,0);loadUsers()}
+const uErr=e=>{const c=String((e&&(e.code||e.message))||'error');return({PERMISSION_DENIED:t('uDenied'),ALREADY_EXISTS:t('uExists'),INVALID_ARGUMENT:t('uInvalid'),FAILED_PRECONDITION:t('uSelf'),NOT_FOUND:t('uNotFound')})[c]||t('uFail',c)};
+const uCall=d=>wt(fnCall('manageUsers',d),30000);
+const roleTxt=r=>t({agent:'rAgent',supervisor:'rSup',admin:'rAdmin'}[r]||'rAgent');
+async function loadUsers(){
+  $('umsg').textContent=t('uLoading');
+  try{uList=(await uCall({action:'list'})).users||[];$('umsg').textContent='';renderUsers()}
+  catch(e){$('umsg').textContent=uErr(e)}
+}
+function renderUsers(){
+  const dt=ms=>ms?new Date(ms).toLocaleString(LANG==='en'?'en-GB':'es-ES',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):t('uNever');
+  $('ulist').innerHTML=`<table class="ut"><thead><tr><th>${esc(t('uEmail'))}</th><th>${esc(t('uName'))}</th><th>${esc(t('uRole'))}</th><th>${esc(t('uLast'))}</th><th>${esc(t('uState'))}</th><th></th></tr></thead><tbody>`+
+  uList.map(u=>{const self=me&&u.uid===me.uid,id=esc(u.uid);
+    return `<tr><td data-l="${esc(t('uEmail'))}" style="overflow-wrap:anywhere">${esc(u.email)}${self?` <span class="mu">${esc(t('uYou'))}</span>`:''}</td>
+    <td data-l="${esc(t('uName'))}">${esc(u.name||'—')}<button type="button" class="lnk" data-ua="name" data-uid="${id}">${esc(t('uEdit'))}</button></td>
+    <td data-l="${esc(t('uRole'))}"><select data-ua="role" data-uid="${id}" ${self?'disabled':''}>${['agent','supervisor','admin'].map(r=>`<option value="${r}" ${u.role===r?'selected':''}>${esc(roleTxt(r))}</option>`).join('')}</select></td>
+    <td data-l="${esc(t('uLast'))}">${esc(dt(u.lastSignIn))}</td>
+    <td data-l="${esc(t('uState'))}"${u.disabled?' style="color:#b3261e"':''}>${esc(t(u.disabled?'uOff':'uActive'))}</td>
+    <td><div class="ua"><button type="button" data-ua="pass" data-uid="${id}">${esc(t('uPass'))}</button>${self?'':`<button type="button" data-ua="dis" data-uid="${id}">${esc(t(u.disabled?'uEnable':'uDisable'))}</button><button type="button" class="del" data-ua="del" data-uid="${id}">${esc(t('uDel'))}</button>`}</div></td></tr>`}).join('')+'</tbody></table>';
+}
+async function uDo(d){
+  $('umsg').textContent=t('uLoading');
+  try{await uCall(d);$('umsg').textContent=t('uSaved');await loadUsers();$('umsg').textContent=t('uSaved')}
+  catch(e){$('umsg').textContent=uErr(e);renderUsers()}
+}
+$('ulist').addEventListener('click',e=>{
+  const b=e.target.closest('button[data-ua]');if(!b)return;const u=uList.find(x=>x.uid===b.dataset.uid);if(!u)return;
+  const a=b.dataset.ua;
+  if(a==='name'){const n=prompt(t('uNameP',u.email),u.name||'');if(n===null)return;uDo({action:'update',uid:u.uid,name:n.trim()})}
+  else if(a==='pass'){const p=prompt(t('uPassP',u.email),'');if(p===null)return;if(p.length<8)return void($('umsg').textContent=t('uShort'));uDo({action:'update',uid:u.uid,password:p})}
+  else if(a==='dis'){if(confirm(t(u.disabled?'uEnC':'uDisC',u.email)))uDo({action:'update',uid:u.uid,disabled:!u.disabled})}
+  else if(a==='del'){if(confirm(t('uDelC',u.email)))uDo({action:'delete',uid:u.uid})}
+});
+$('ulist').addEventListener('change',e=>{
+  const s=e.target.closest('select[data-ua=role]');if(!s)return;const u=uList.find(x=>x.uid===s.dataset.uid);if(!u)return;
+  if(confirm(t('uRoleC',u.email,roleTxt(s.value))))uDo({action:'update',uid:u.uid,role:s.value});else s.value=u.role;
+});
+async function createUser(){
+  const email=$('nuE').value.trim().toLowerCase(),name=$('nuN').value.trim(),password=$('nuP').value,role=$('nuR').value;
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return void($('numsg').textContent=t('uBadEmail'));
+  if(password.length<8)return void($('numsg').textContent=t('uShort'));
+  $('nuGo').disabled=true;$('numsg').textContent=t('uLoading');
+  try{await uCall({action:'create',email,name,password,role});$('numsg').textContent=t('uCreated',email);$('nuE').value='';$('nuN').value='';$('nuP').value='';$('nuR').value='agent';loadUsers()}
+  catch(e){$('numsg').textContent=uErr(e)}
+  finally{$('nuGo').disabled=false}
+}
 function show(w){$('boot').hidden=true;$('auth').hidden=w!=='auth';$('app').hidden=w!=='app'}
 function authErr(e){
   const c=(e&&e.code)||'';
@@ -993,7 +1056,12 @@ async function start(){
   const sd=db.collection('supervisores').doc((u.email||'').toLowerCase());
   try{sup=(await wt(navigator.onLine?sd.get():sd.get({source:'cache'}),8000)).exists}
   catch(e){try{sup=(await sd.get({source:'cache'})).exists}catch(e2){}}
+  // Administrador: puede gestionar usuarios (página «Usuarios» en el menú ☰)
+  let adm=isAdm;const ad=db.collection('admins').doc((u.email||'').toLowerCase());
+  try{adm=(await wt(navigator.onLine?ad.get():ad.get({source:'cache'}),8000)).exists}
+  catch(e){try{adm=(await ad.get({source:'cache'})).exists}catch(e2){}}
   if(me!==u)return;
+  isAdm=adm;adminUI();
   isSup=sup;$('who').textContent=u.email+(isSup?t('sup'):'');
   const col=db.collection('visits'),qy=isSup?col:col.where('agentUid','==',u.uid);
   unsub=qy.onSnapshot(s=>{srv=s.docs.map(d=>({...d.data(),id:d.id}));merge();render()},e=>{$('msg2').textContent=t('loadFail',e.code||'error')});
@@ -1002,7 +1070,7 @@ async function start(){
 auth.onAuthStateChanged(u=>{
   if(unsub){unsub();unsub=null}
   if(draftUnsub){draftUnsub();draftUnsub=null}
-  srv=[];visits=[];sel.clear();me=u;isSup=false;errRetried=false;shown=PAGE;setDraft(null);
+  srv=[];visits=[];sel.clear();me=u;isSup=false;isAdm=false;adminUI();errRetried=false;shown=PAGE;setDraft(null);
   if(!u){$('q').value='';$('per').value='all';$('ag').value='all';show('auth');return}
   $('who').textContent=u.email;
   show('app');tab(1);checkLegacy();net();merge();render();start();
@@ -1018,6 +1086,7 @@ function applyLang(){
   ['es','en'].forEach(l=>$('lg-'+l).classList.toggle('on',l===LANG));
   rows.forEach(n=>{sigBtn(n,'o');sigBtn(n,'c');linkNote(n)});if($('c').dataset.cid)$('stc').innerHTML='<span class="lk">✓ '+esc(t('linkedC'))+'</span>';collabBtn();renumber();
   if(me){$('who').textContent=me.email+(isSup?t('sup'):'');checkLegacy()}
+  if(!$('t3').hidden&&uList.length)renderUsers();
   render();
 }
 function setLang(l){if(l!=='es'&&l!=='en')return;LANG=l;try{localStorage.setItem('lang',l)}catch(e){}msg('');$('amsg').textContent='';$('msg2').textContent='';applyLang()}
