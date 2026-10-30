@@ -325,7 +325,7 @@ const phraseOf=v=>T((getProps(v).length>1?'frN':'fr1')+(has2(v)?'C2':''),lg(v));
 /* ===== Respacio CRM (through Firebase functions) ===== */
 const FN_BASE='https://europe-west1-hoja-de-visitas.cloudfunctions.net/';
 // Funciones de Cloud Run (2.ª gen.), con dirección propia: la consola ya no crea funciones de 1.ª gen.
-const FN_URL={manageUsers:''};
+const FN_URL={manageUsers:'https://manageusers-441072354523.europe-west1.run.app'};
 async function fnCall(name,data,signal){
   if(!me)throw new Error('auth');
   const tk=await me.getIdToken();
