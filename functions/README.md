@@ -34,7 +34,10 @@ Las credenciales de Respacio (`RESPACIO_BASIC`, `RESPACIO_API_KEY`) están en lo
 
 - **Usuarios (función `manageUsers`).** Solo para administradores (colección `admins/{email}`; el primero se añade a mano
   en la consola). Lista, crea, edita nombre, contraseña y rol (agente / supervisor / administrador), desactiva y borra.
-  Un administrador no puede cambiar su propio rol, desactivarse ni borrarse. Necesita `index.js`, `crm.js` y `users.js`.
+  Un administrador no puede cambiar su propio rol, desactivarse ni borrarse.
+  La consola ya no crea funciones de 1.ª generación, así que se despliega como **función de Cloud Run** (servicio
+  `manageusers`, punto de entrada `manageUsers`) con la carpeta `manageUsers-run/` (`index.js`, `package.json` y una copia
+  de `users.js`). Su dirección va en `FN_URL` de `index.html`.
 
 ## Pendiente
 
