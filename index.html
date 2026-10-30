@@ -329,8 +329,8 @@ function namesListen(){
     whoTxt();render();
   },()=>{});
 }
-// Cabecera: nombre (si lo puso el administrador) · email · rol
-function whoTxt(){if(!me)return;const n=NAMES[String(me.email||'').toLowerCase()];$('who').textContent=(n?n+' · ':'')+(me.email||'')+(isSup?t('sup'):'')}
+// Cabecera: el nombre (si lo puso el administrador) o, si no hay, el email; y el rol
+function whoTxt(){if(!me)return;const n=NAMES[String(me.email||'').toLowerCase()];$('who').textContent=(n||me.email||'')+(isSup?t('sup'):'')}
 function nombre(e){const k=String(e||'').trim().toLowerCase();if(NAMES[k])return NAMES[k];const l=String(e||'').split('@')[0],f=l.split(/[._\-+0-9]+/).filter(Boolean)[0]||l;return f?f.charAt(0).toUpperCase()+f.slice(1).toLowerCase():'-'}
 function getProps(v){return Array.isArray(v.props)&&v.props.length?v.props:[{ref:v.ref,property:v.property}]}
 const lg=v=>v&&v.lang==='en'?'en':'es';
