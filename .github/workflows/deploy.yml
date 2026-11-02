@@ -1,0 +1,45 @@
+name: Desplegar en Firebase
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # No se ejecuta hasta que el repositorio tenga la variable FIREBASE_PROJECT_ID (ver functions/README.md)
+    if: vars.FIREBASE_PROJECT_ID != ''
+    runs-on: ubuntu-latest
+    env:
+      # Qué se despliega. Por defecto la web y las reglas; para incluir las funciones, poner la variable
+      # DEPLOY_ONLY = hosting,firestore:rules,functions
+      ONLY: ${{ vars.DEPLOY_ONLY || 'hosting,firestore:rules' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Solo los archivos de la app (nunca el código de las funciones ni los README)
+      - name: Preparar la web
+        run: |
+          mkdir -p dist/fonts
+          cp index.html sw.js manifest.json logo.png icon-192.png icon-512.png dist/
+          cp fonts/*.ttf fonts/OFL.txt dist/fonts/
+
+      - name: Dependencias de las funciones
+        if: contains(env.ONLY, 'functions')
+        run: npm install --prefix functions --no-audit --no-fund
+
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      # Sin --force: si el despliegue fuera a borrar alguna función, se detiene en lugar de borrarla
+      - name: Desplegar
+        run: npx --yes firebase-tools@15 deploy --project "${{ vars.FIREBASE_PROJECT_ID }}" --only "$ONLY" --non-interactive

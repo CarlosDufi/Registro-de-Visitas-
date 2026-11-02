@@ -60,3 +60,27 @@ No pulsar «Actualizar» a Cloud Run Functions (2.ª generación).
 firebase deploy --only functions
 firebase deploy --only firestore:rules
 ```
+
+## Despliegue automático (GitHub Actions → Firebase)
+
+`.github/workflows/deploy.yml` despliega en cada merge a `main` (o con **Actions → Desplegar en Firebase → Run workflow**).
+Solo se ejecuta si existe la variable `FIREBASE_PROJECT_ID`.
+
+- **Web:** copia solo los archivos de la app a `dist/` y la publica en Firebase Hosting (`https://hoja-de-visitas.web.app`).
+- **Reglas:** `firestore.rules`.
+- **Funciones:** solo si la variable `DEPLOY_ONLY` las incluye (`hosting,firestore:rules,functions`). Sin `--force`: si el
+  despliegue fuera a borrar alguna función, se detiene.
+
+Configuración en GitHub (repositorio → **Settings → Secrets and variables → Actions**):
+
+| Tipo | Nombre | Valor |
+|---|---|---|
+| Secret | `FIREBASE_SERVICE_ACCOUNT` | JSON de la cuenta de servicio de despliegue |
+| Variable | `FIREBASE_PROJECT_ID` | `hoja-de-visitas` |
+| Variable | `DEPLOY_ONLY` | (opcional) `hosting,firestore:rules,functions` |
+
+Cuenta de servicio (Google Cloud → IAM → Cuentas de servicio): *Administrador de Firebase*, *Administrador de Cloud
+Functions*, *Administrador de Cloud Run*, *Usuario de cuenta de servicio*, *Administrador de Secret Manager* y
+*Administrador de Artifact Registry*.
+
+Mudanza desde GitHub Pages: con `NEW_URL` en `index.html`, la dirección antigua muestra un aviso con el enlace a la nueva.
