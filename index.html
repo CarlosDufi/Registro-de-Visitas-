@@ -121,7 +121,7 @@ button.p{background:var(--ac);color:var(--onac);width:100%;font-size:16px;margin
 <div class="card"><b data-i="usersT"></b><div id="umsg" class="mu" style="min-height:18px;margin:6px 0"></div><div id="ulist"></div></div>
 </section>
 <section id="t2" hidden>
-<div class="row" style="margin-top:8px;gap:8px"><h2 style="margin:0" data-i="allV"></h2><button id="pdfbtn" onclick="pdf()"></button></div>
+<div class="row" style="margin-top:8px;gap:8px"><h2 style="margin:0" data-i="allV"></h2><span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><button id="pdfbtn" onclick="pdf()"></button><button id="shbtn" onclick="pdf(null,true)"></button></span></div>
 <div id="msg2" class="mu" style="min-height:18px;margin:6px 0"></div>
 <div class="card" style="padding:12px"><input id="q" type="search" data-ph="search" oninput="qInput()"><select id="per" onchange="refilter()" style="margin-top:8px"></select><select id="ag" onchange="refilter()" style="margin-top:8px" hidden></select></div>
 <div class="row" style="margin:4px 0 8px"><label class="chk" style="font-size:14px"><input type="checkbox" id="selall" onchange="selAll(this.checked)"><span data-i="selAll"></span></label><span id="cnt" class="mu"></span></div>
@@ -165,7 +165,7 @@ es:{
  queued:'Sin conexión suficiente: la visita queda guardada en este dispositivo y se enviará sola cuando haya señal. No borres los datos del navegador.',
  queuedMem:'No hay espacio en el dispositivo: la visita NO se ha podido guardar en él. Se enviará cuando haya señal, pero no cierres ni recargues la app hasta entonces.',
  saveFail:c=>'No se pudo guardar la visita ('+c+'). Inténtalo de nuevo.',
- allV:'Todas las visitas',pdfAll:'Descargar todas (PDF)',pdfSel:n=>'Descargar seleccionadas ('+n+')',pdfRes:n=>'Descargar resultados ('+n+')',
+ allV:'Todas las visitas',pdfAll:'Descargar todas (PDF)',shTop:n=>'Compartir ('+n+')',shTopAll:'Compartir todas',pdfManyC:n=>'Se van a generar '+n+' PDF, uno por visita. ¿Continuar?',pdfProg:(i,n)=>'Generando PDF '+i+' de '+n+'…',pdfDone:n=>n+' PDF descargados. Si solo ves uno, permite las descargas múltiples en el navegador.',shReady:n=>n+' PDF listos.',shNow:'Compartir ahora',pdfSel:n=>'Descargar seleccionadas ('+n+')',pdfRes:n=>'Descargar resultados ('+n+')',
  search:'Buscar por nº de referencia o propiedad',allPeriod:'Todo el periodo',quarters:'Trimestres',monthsL:'Meses',qLabel:(q,y)=>'T'+q+' '+y,
  months:['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'],allAgents:'Todos los agentes',
  selAll:'Seleccionar todas',cnt:n=>n+' hojas',cntF:(a,b)=>a+' de '+b+' hojas',empty:'Aún no hay visitas.',noMatch:'No hay visitas que coincidan con la búsqueda.',more:n=>'Mostrar más ('+n+' restantes)',
@@ -208,7 +208,7 @@ en:{
  queued:'Not enough signal: the viewing is saved on this device and will be sent automatically when you have signal. Do not clear your browser data.',
  queuedMem:'There is no space left on the device: the viewing could NOT be saved on it. It will be sent when you have signal, but do not close or reload the app until then.',
  saveFail:c=>'The viewing could not be saved ('+c+'). Please try again.',
- allV:'All viewings',pdfAll:'Download all (PDF)',pdfSel:n=>'Download selected ('+n+')',pdfRes:n=>'Download results ('+n+')',
+ allV:'All viewings',pdfAll:'Download all (PDF)',shTop:n=>'Share ('+n+')',shTopAll:'Share all',pdfManyC:n=>n+' PDFs will be generated, one per viewing. Continue?',pdfProg:(i,n)=>'Generating PDF '+i+' of '+n+'…',pdfDone:n=>n+' PDFs downloaded. If you only see one, allow multiple downloads in the browser.',shReady:n=>n+' PDFs ready.',shNow:'Share now',pdfSel:n=>'Download selected ('+n+')',pdfRes:n=>'Download results ('+n+')',
  search:'Search by reference no. or property',allPeriod:'All time',quarters:'Quarters',monthsL:'Months',qLabel:(q,y)=>'Q'+q+' '+y,
  months:['January','February','March','April','May','June','July','August','September','October','November','December'],allAgents:'All agents',
  selAll:'Select all',cnt:n=>n+' sheets',cntF:(a,b)=>a+' of '+b+' sheets',empty:'No viewings yet.',noMatch:'No viewings match your search.',more:n=>'Show more ('+n+' remaining)',
@@ -499,7 +499,9 @@ function toggle(id,on){on?sel.add(id):sel.delete(id);upd()}
 function selAll(on){filtered().forEach(v=>on?sel.add(v.id):sel.delete(v.id));draw()}
 function upd(ff){
   const n=sel.size,f=ff||filtered();
+  const k=n||(isFiltered()?f.length:0);
   $('pdfbtn').textContent=n?t('pdfSel',n):(isFiltered()?t('pdfRes',f.length):t('pdfAll'));
+  $('shbtn').textContent=k?t('shTop',k):t('shTopAll');
   $('selall').checked=f.length>0&&f.every(v=>sel.has(v.id));
   $('cnt').textContent=isFiltered()?t('cntF',f.length,visits.length):t('cnt',visits.length);
 }
@@ -519,12 +521,9 @@ function pdfTexts(list){
   const o=[];list.forEach(v=>{o.push(v.client,v.client2,v.collabName,v.collab2Name,nombre(v.agentEmail));getProps(v).forEach(p=>o.push(p.ref,p.property,p.ownerName,p.collabName,p.collab2Name))});
   return o.filter(Boolean).map(String).join(' ');
 }
-async function pdf(id,share){
-  const m=$('msg2');m.textContent='';
-  const list=id?visits.filter(v=>v.id===id):(sel.size?sorted().filter(v=>sel.has(v.id)):filtered());
-  if(!list.length){m.textContent=t('noPdf');return}
-  if(!window.jspdf){m.textContent=t('pdfLoad');return}
-  try{
+/* Genera el PDF de una visita: devuelve {blob,name,warn} */
+async function buildPdf(list){
+  {
     const docL=list.every(v=>lg(v)===lg(list[0]))?lg(list[0]):LANG;
     const d=new window.jspdf.jsPDF({unit:'mm',format:'a4'}),txt=pdfTexts(list);let warn='';
     if(!WINANSI.test(txt)){
@@ -619,19 +618,49 @@ async function pdf(id,share){
       const ds=list.map(dOf).sort(),a=ds[0],b=ds[ds.length-1];
       name=(a===b?a:a+'_a_'+b)+'-visitas.pdf';
     }
-    const blob=new Blob([data],{type:'application/pdf'});
-    if(warn)m.textContent=warn;
+    return{blob:new Blob([data],{type:'application/pdf'}),name,warn};
+  }
+}
+/* Descargar o compartir: un PDF por visita (también al seleccionar varias). Con más de 20 se pide confirmación.
+   Las descargas van una tras otra (el navegador pregunta una vez si permite varias). Compartir envía todos los PDF a la
+   vez al menú del sistema; si generar tarda y el navegador ya no lo permite, se ofrece un botón para compartirlos. */
+function dlBlob(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),60000)}
+async function shareFiles(fl){await navigator.share(fl.length===1?{files:fl,title:fl[0].name.replace(/\.pdf$/,'')}:{files:fl})}
+async function pdf(id,share){
+  const m=$('msg2');m.textContent='';
+  const list=id?visits.filter(v=>v.id===id):(sel.size?sorted().filter(v=>sel.has(v.id)):filtered());
+  if(!list.length){m.textContent=t('noPdf');return}
+  if(!window.jspdf){m.textContent=t('pdfLoad');return}
+  if(list.length>20&&!confirm(t('pdfManyC',list.length)))return;
+  const btns=[$('pdfbtn'),$('shbtn')];btns.forEach(b=>b.disabled=true);
+  try{
+    const files=[];let warn='';
+    for(let i=0;i<list.length;i++){
+      if(list.length>1){m.textContent=t('pdfProg',i+1,list.length);await new Promise(r=>setTimeout(r,0))}
+      const r=await buildPdf([list[i]]);if(r.warn)warn=r.warn;files.push(r);
+    }
+    // Misma fecha y referencia en dos visitas: -2, -3… para no sobrescribir
+    const seen={};files.forEach(f=>{const k=f.name.toLowerCase();seen[k]=(seen[k]||0)+1;if(seen[k]>1)f.name=f.name.replace(/\.pdf$/,'-'+seen[k]+'.pdf')});
+    m.textContent=warn;
     if(share){
-      let file=null;try{file=new File([blob],name,{type:'application/pdf'})}catch(e){}
-      if(file&&navigator.canShare&&navigator.canShare({files:[file]})){
-        try{await navigator.share({files:[file],title:name.replace(/\.pdf$/,'')});return}
-        catch(e){if(e&&e.name==='AbortError')return}
+      let fl=null;try{fl=files.map(f=>new File([f.blob],f.name,{type:'application/pdf'}))}catch(e){}
+      if(fl&&navigator.canShare&&navigator.canShare({files:fl})){
+        try{await shareFiles(fl);return}
+        catch(e){
+          if(e&&e.name==='AbortError')return;
+          if(e&&e.name==='NotAllowedError'){
+            m.innerHTML=esc(t('shReady',fl.length))+' <button type="button" id="shNow">'+esc(t('shNow'))+'</button>';
+            $('shNow').onclick=async()=>{try{await shareFiles(fl);m.textContent=''}catch(e2){if(!(e2&&e2.name==='AbortError'))m.textContent=t('shUnsupported')}};
+            return;
+          }
+        }
       }
       m.textContent=t('shUnsupported')+(warn?' '+warn:'');
     }
-    // El enlace temporal se libera pasado un minuto (liberarlo al instante corta la descarga en algunos móviles)
-    const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);
+    for(let i=0;i<files.length;i++){dlBlob(files[i].blob,files[i].name);if(i<files.length-1)await new Promise(r=>setTimeout(r,500))}
+    if(files.length>1)m.textContent=t('pdfDone',files.length)+(warn?' '+warn:'');
   }catch(e){m.textContent=t('pdfErr')}
+  finally{btns.forEach(b=>b.disabled=false)}
 }
 /* ===== Lista, con valoración y feedback editables dentro de cada visita ===== */
 const fbd={},fbm={};let deferred=false;
