@@ -3,6 +3,7 @@ const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const crm = require('./crm');
 const users = require('./users');
+const mfa = require('./mfa');
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -76,11 +77,12 @@ exports.manageUsers = functions
   .https.onCall(async (data, ctx) => {
     needAuth(ctx);
     const tk = ctx.auth.token || {};
-    const caller = { uid: ctx.auth.uid, email: String(tk.email || '').toLowerCase(), mfa: !!(tk.firebase && tk.firebase.sign_in_second_factor) };
+    const caller = { uid: ctx.auth.uid, email: String(tk.email || '').toLowerCase(), mfa: tk.mfa === 'totp' || !!(tk.firebase && tk.firebase.sign_in_second_factor) };
     try {
+      if (/^mfa/.test(String((data && data.action) || ''))) return await mfa.handle({ auth: admin.auth(), db, caller, data, roleOf: users.roleOf });
       return await users.manage({ auth: admin.auth(), db, caller, data, requireMfa: process.env.REQUIRE_MFA === '1' });
     } catch (e) {
-      if (e instanceof users.UserError) throw new HttpsError(e.code, e.message);
+      if (e instanceof users.UserError || e instanceof mfa.MfaError) throw new HttpsError(e.code, e.message);
       console.error('manageUsers error:', e && e.code, e && e.message);
       throw new HttpsError('internal', 'Unexpected error');
     }

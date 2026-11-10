@@ -3,8 +3,11 @@ service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
     function myEmail() { return request.auth.token.email.lower(); }
-    // Sesión iniciada con la verificación en dos pasos (app de códigos)
-    function mfa() { return 'sign_in_second_factor' in request.auth.token.firebase; }
+    // Sesión iniciada con la verificación en dos pasos (app de códigos): la nuestra (marca mfa de la función
+    // manageUsers) o la de Firebase
+    function mfa() {
+      return request.auth.token.get('mfa', '') == 'totp' || 'sign_in_second_factor' in request.auth.token.firebase;
+    }
     // Supervisor: ve las visitas de todos, solo si ha entrado con la verificación en dos pasos
     function isSupervisor() {
       return signedIn() && mfa() &&
@@ -44,6 +47,10 @@ service cloud.firestore {
     match /admins/{email} {
       allow read: if signedIn() && myEmail() == email;
       allow write: if false;
+    }
+    // Claves de la verificación en dos pasos: solo las lee y escribe la función manageUsers, nunca la app
+    match /mfa/{uid} {
+      allow read, write: if false;
     }
     // Nombres de los usuarios (para visitas y PDF). Los escribe solo la función manageUsers.
     match /usuarios/{email} {

@@ -8,11 +8,12 @@
 const functions = require('@google-cloud/functions-framework');
 const admin = require('firebase-admin');
 const users = require('./users');
+const mfa = require('./mfa');
 
 admin.initializeApp();
 const db = admin.firestore();
 
-const HTTP = { 'invalid-argument': 400, 'failed-precondition': 400, unauthenticated: 401, 'permission-denied': 403, 'not-found': 404, 'already-exists': 409, internal: 500 };
+const HTTP = { 'invalid-argument': 400, 'failed-precondition': 400, unauthenticated: 401, 'permission-denied': 403, 'not-found': 404, 'already-exists': 409, 'resource-exhausted': 429, internal: 500 };
 const fail = (res, code, message) =>
   res.status(HTTP[code] || 500).json({ error: { status: code.toUpperCase().replace(/-/g, '_'), message } });
 
@@ -31,11 +32,16 @@ functions.http('manageUsers', async (req, res) => {
 
   try {
     // mfa: signed in with the second factor. REQUIRE_MFA=1 (Cloud Run variable) makes it compulsory for admins.
-    const caller = { uid: token.uid, email: String(token.email || '').toLowerCase(), mfa: !!(token.firebase && token.firebase.sign_in_second_factor) };
-    const result = await users.manage({ auth: admin.auth(), db, caller, data: (req.body && req.body.data) || {}, requireMfa: process.env.REQUIRE_MFA === '1' });
+    // mfa: session opened with the second factor (ours: claim mfa 'totp'; Firebase's: sign_in_second_factor)
+    const caller = { uid: token.uid, email: String(token.email || '').toLowerCase(), mfa: token.mfa === 'totp' || !!(token.firebase && token.firebase.sign_in_second_factor) };
+    const data = (req.body && req.body.data) || {};
+    // mfa* actions: our own two-step verification, for supervisors and admins (see mfa.js)
+    const result = /^mfa/.test(String(data.action || ''))
+      ? await mfa.handle({ auth: admin.auth(), db, caller, data, roleOf: users.roleOf })
+      : await users.manage({ auth: admin.auth(), db, caller, data, requireMfa: process.env.REQUIRE_MFA === '1' });
     res.status(200).json({ result });
   } catch (e) {
-    if (e instanceof users.UserError) return fail(res, e.code, e.message);
+    if (e instanceof users.UserError || e instanceof mfa.MfaError) return fail(res, e.code, e.message);
     console.error('manageUsers error:', e && e.code, e && e.message);
     fail(res, 'internal', 'Unexpected error');
   }
