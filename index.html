@@ -45,7 +45,7 @@ button.p{background:var(--ac);color:var(--onac);width:100%;font-size:16px;margin
 .ut td{vertical-align:middle}.ut .ua{display:flex;gap:6px;flex-wrap:wrap}.ut .ua button{padding:6px 10px;font-size:13px}.ut .lnk{border:0;padding:0 0 0 6px;background:none;text-decoration:underline;font-size:13px}.ut select{width:auto;padding:6px 8px;margin:0}.ut .del{color:#b3261e;border-color:#b3261e}
 /* Una tarjeta por usuario (la app tiene ancho de móvil también en el ordenador) */
 .ut thead{display:none}.ut,.ut tbody,.ut tr,.ut td{display:block;width:100%}.ut tr{border:1px solid var(--bd);border-radius:10px;padding:8px 10px;margin-bottom:8px}.ut td{border:0;padding:3px 0}.ut td[data-l]::before{content:attr(data-l) ': ';color:var(--mu);font-size:12px}
-body.mfa-wait #app>:not(.userbar):not(#mfaCard){display:none!important}.userbar{margin:0 0 10px}.userbar .mu{margin-right:8px;overflow-wrap:anywhere}
+body.mfa-wait #app>:not(.userbar):not(#mfaCard){display:none!important}body.mfa-check #app>:not(.userbar):not(#mfaChk){display:none!important}#mfaChk{display:none}body.mfa-check #mfaChk{display:block}.userbar{margin:0 0 10px}.userbar .mu{margin-right:8px;overflow-wrap:anywhere}
 .prop{border:1px solid var(--bd);border-radius:10px;padding:4px 12px 12px;margin:10px 0}.prop .row{margin-top:10px}.prop .rm{padding:4px 10px;font-size:12px}
 #msg{color:var(--ac);font-size:14px;min-height:18px;margin-top:8px}
 .langbar{display:flex;justify-content:flex-end;gap:6px;margin:0 0 4px}.lg{padding:4px 12px;font-size:12px;border-radius:6px}.lg.on{background:var(--ac);color:var(--onac)}
@@ -82,7 +82,7 @@ body.mfa-wait #app>:not(.userbar):not(#mfaCard){display:none!important}.userbar{
 </section>
 <div id="app" hidden>
 <div class="row userbar"><span class="mu" id="who"></span><span class="menuw"><button id="lo" onclick="logout()" data-i="logout"></button><button id="menuB" hidden onclick="togMenu()" aria-haspopup="true" style="font-size:18px;padding:6px 12px">☰</button><div id="menu" class="menu" hidden><button onclick="openUsers()" data-i="usersT"></button><button onclick="logout()" data-i="logout"></button></div></span></div>
-<div class="card" id="mfaCard" hidden style="border-color:var(--ac)"><b id="mfaTs" data-i="mfaT"></b><b id="mfaTv" data-i="mfaTv" hidden></b><div id="mfaVerify" hidden><p class="mu" style="margin:4px 0 8px" data-i="mfaAsk"></p><label for="mfaVer" data-i="mfaCodeL"></label><input id="mfaVer" inputmode="numeric" autocomplete="one-time-code"><button class="p" id="mfaVerGo" data-i="mfaGo"></button><button type="button" onclick="logout()" style="margin-left:8px" data-i="logout"></button></div><p class="mu" id="mfaWhy" style="margin:4px 0 8px" data-i="mfaWhy"></p><div id="mfaRelogin" hidden><p class="mu" style="margin:4px 0 8px" data-i="mfaRelogin"></p><button type="button" onclick="auth.signOut()" style="background:var(--ac);color:var(--onac)" data-i="mfaReloginGo"></button></div>
+<p class="mu" id="mfaChk" data-i="uLoading"></p><div class="card" id="mfaCard" hidden style="border-color:var(--ac)"><b id="mfaTs" data-i="mfaT"></b><b id="mfaTv" data-i="mfaTv" hidden></b><div id="mfaVerify" hidden><p class="mu" style="margin:4px 0 8px" data-i="mfaAsk"></p><label for="mfaVer" data-i="mfaCodeL"></label><input id="mfaVer" inputmode="numeric" autocomplete="one-time-code"><button class="p" id="mfaVerGo" data-i="mfaGo"></button><button type="button" onclick="logout()" style="margin-left:8px" data-i="logout"></button></div><p class="mu" id="mfaWhy" style="margin:4px 0 8px" data-i="mfaWhy"></p><div id="mfaRelogin" hidden><p class="mu" style="margin:4px 0 8px" data-i="mfaRelogin"></p><button type="button" onclick="auth.signOut()" style="background:var(--ac);color:var(--onac)" data-i="mfaReloginGo"></button></div>
 <div id="mfaSetup" hidden><p class="mu" style="margin:0 0 8px" data-i="mfaScan"></p><div id="mfaQr" style="background:#fff;display:inline-block;padding:8px;border-radius:8px;line-height:0"></div><p style="margin:8px 0"><a id="mfaLink" data-i="mfaOpen"></a></p><p class="mu" style="margin:8px 0 4px" data-i="mfaKeyL"></p><code id="mfaKey" style="word-break:break-all;font-size:15px"></code><label for="mfaEnr" data-i="mfaCodeL"></label><input id="mfaEnr" inputmode="numeric" autocomplete="one-time-code"><button class="p" id="mfaFin" data-i="mfaFin"></button></div>
 <button type="button" id="mfaStart" style="background:var(--ac);color:var(--onac)" data-i="mfaStart"></button><div id="mfaMsg" class="mu" style="min-height:18px;margin-top:8px"></div></div>
 <div class="card" id="moved" hidden style="border-color:var(--ac)"><b data-i="movedT"></b><p class="mu" style="margin:4px 0 8px" data-i="movedSub"></p><a id="movedA" rel="noopener"><button type="button" style="background:var(--ac);color:var(--onac)" data-i="movedGo"></button></a></div>
@@ -1102,17 +1102,33 @@ $('mfaCode').addEventListener('keydown',e=>{if(e.key==='Enter')$('mfaGo').click(
    código y la app queda bloqueada hasta escribirlo. Con el código correcto, el servidor devuelve una sesión nueva con
    la marca mfa:'totp', que es la que exigen las reglas. Sin conexión no se pide (se usa la sesión guardada). */
 const MFA_CARD=true;
+// Lo que este dispositivo sabe de cada usuario (rol y si ya tiene la verificación), para no enseñar la app ni un
+// instante antes de pedir el código y no esperar a la función cuando ya se sabe la respuesta
+const mfaMem=uid=>{try{return JSON.parse(localStorage.getItem('vMfa:'+uid)||'null')}catch(e){return null}};
+const mfaKeep=(uid,o)=>{try{localStorage.setItem('vMfa:'+uid,JSON.stringify({...(mfaMem(uid)||{}),...o}))}catch(e){}};
 async function mfaState(u){
   try{const r=await u.getIdTokenResult();if(r.claims.mfa==='totp'||r.signInSecondFactor)return 'ok'}catch(e){return 'ok'}
   if(!navigator.onLine)return 'ok';
-  try{const r=await fnCall('manageUsers',{action:'mfaStatus'});return r&&r.enrolled?'verify':'setup'}catch(e){return 'ok'}
+  const ask=()=>fnCall('manageUsers',{action:'mfaStatus'}).then(r=>{const e=!!(r&&r.enrolled);mfaKeep(u.uid,{e});return e});
+  // Ya se sabe que la tiene: se pide el código al momento y se confirma con el servidor por detrás
+  // (si un administrador la ha quitado, la tarjeta pasa a «Activar»)
+  if((mfaMem(u.uid)||{}).e){ask().then(e=>{if(!e&&u===me)mfaUI()}).catch(()=>{});return 'verify'}
+  try{return (await ask())?'verify':'setup'}catch(e){return 'ok'}
+}
+// Hasta saber si hay que pedir el código, solo se ve la barra de arriba y «Cargando…» (máximo 15 s)
+let mfaChkT=null;
+function mfaCheck(on){
+  clearTimeout(mfaChkT);document.body.classList.toggle('mfa-check',on);
+  if(on)mfaChkT=setTimeout(()=>document.body.classList.remove('mfa-check'),15000);
 }
 let mfaSeq=0;
 async function mfaUI(){
   const my=++mfaSeq,u=me;
   let st='ok';
+  if(u)mfaKeep(u.uid,{r:isSup||isAdm?'sup':'agent'});
   if(MFA_CARD&&u&&(isSup||isAdm))st=await mfaState(u);
   if(my!==mfaSeq||u!==me)return;
+  mfaCheck(false);
   $('mfaCard').hidden=st==='ok';
   $('mfaVerify').hidden=st!=='verify';$('mfaTv').hidden=st!=='verify';$('mfaTs').hidden=st==='verify';$('mfaWhy').hidden=st!=='setup';$('mfaRelogin').hidden=true;
   $('mfaStart').hidden=st!=='setup'||!$('mfaSetup').hidden;
@@ -1134,6 +1150,7 @@ function mfaFnErr(e){
 async function mfaSignIn(token){
   const u=await auth.signInWithCustomToken(token);
   if(u)me=u;
+  if(me)mfaKeep(me.uid,{e:true});
   $('mfaSetup').hidden=true;$('mfaVer').value='';$('mfaEnr').value='';
   await start();
 }
@@ -1165,6 +1182,7 @@ async function mfaSend(action,inp,btn,ok){
   }catch(e){
     $('mfaMsg').textContent=mfaFnErr(e);
     if(/setup expired/i.test((e&&e.detail)||'')){$('mfaSetup').hidden=true;$('mfaStart').hidden=false}
+    if(/is not on/i.test((e&&e.detail)||'')&&me){mfaKeep(me.uid,{e:false});$('mfaMsg').textContent='';mfaUI()}
   }
   finally{$(btn).disabled=false}
 }
@@ -1237,9 +1255,11 @@ auth.onAuthStateChanged(u=>{
   if(unsub){unsub();unsub=null}
   if(draftUnsub){draftUnsub();draftUnsub=null}
   if(namesUnsub){namesUnsub();namesUnsub=null}
-  srv=[];visits=[];sel.clear();me=u;isSup=false;isAdm=false;adminUI();$('mfaCard').hidden=true;$('mfaSetup').hidden=true;$('mfaStart').hidden=false;$('mfaMsg').textContent='';document.body.classList.remove('mfa-wait');mfaSeq++;if(u){mfaPending=null;$('mfaBox').hidden=true}errRetried=false;shown=PAGE;setDraft(null);
+  srv=[];visits=[];sel.clear();me=u;isSup=false;isAdm=false;adminUI();$('mfaCard').hidden=true;$('mfaSetup').hidden=true;$('mfaStart').hidden=false;$('mfaMsg').textContent='';document.body.classList.remove('mfa-wait');mfaCheck(false);mfaSeq++;if(u){mfaPending=null;$('mfaBox').hidden=true}errRetried=false;shown=PAGE;setDraft(null);
   if(!u){$('q').value='';$('per').value='all';$('ag').value='all';show('auth');return}
   whoTxt();
+  // Supervisor o administrador (o usuario aún desconocido en este dispositivo): no enseñar la app hasta saber si pide el código
+  mfaCheck(MFA_CARD&&(mfaMem(u.uid)||{}).r!=='agent');
   show('app');tab(1);checkLegacy();net();merge();render();start();
 });
 window.addEventListener('online',()=>{net();start()});
