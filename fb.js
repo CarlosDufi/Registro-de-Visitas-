@@ -100,8 +100,18 @@
 
   /* ===== Verificación en dos pasos (app de códigos) ===== */
   window.fbMfa = {
-    // ¿Tiene ya configurada la app de códigos?
-    enrolled(user) { return W(() => A.multiFactor(user).enrolledFactors.some(f => f.factorId === 'totp')); },
+    // ¿Tiene ya configurada la app de códigos? Primero pide a Firebase los datos al día de la cuenta: la copia guardada
+    // en el navegador puede ser de antes de activarla. Si la sesión ya no vale (al activar la verificación se anulan
+    // las sesiones anteriores), cierra la sesión para volver a entrar. Sin conexión, usa la copia guardada.
+    enrolled(user) {
+      return W(async () => {
+        try { await A.reload(user); } catch (e) {
+          const c = (e && e.code) || '';
+          if (/user-token-expired|invalid-user-token|user-disabled|user-not-found/.test(c)) { await A.signOut(auth); throw e; }
+        }
+        return A.multiFactor(user).enrolledFactors.some(f => f.factorId === 'totp');
+      });
+    },
     // Empieza la configuración: clave secreta + dirección otpauth:// para el QR; finish(código) la completa
     async start(user) {
       await ready;
