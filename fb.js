@@ -1,11 +1,11 @@
-/* Conexión con Firebase: SDK modular 10.14.1 con la misma forma que la versión «compat» que usaba la app
+/* Conexión con Firebase: SDK modular 13.1.0 (la misma versión que CRM-analytics) con la misma forma que la versión «compat» que usaba la app
    (firebase.initializeApp / auth() / firestore()), para no cambiar el resto del código. Los módulos se cargan al
    arrancar y cada operación espera a que estén listos. Incluye la verificación en dos pasos con app de códigos
    (TOTP), que la versión «compat» no ofrece: window.fbMfa y el campo `mfa` del error al iniciar sesión.
    Si ya existe window.firebase (pruebas con Firebase simulado), no hace nada. */
 (function () {
   if (window.firebase) return;
-  const V = 'https://www.gstatic.com/firebasejs/10.14.1/';
+  const V = 'https://www.gstatic.com/firebasejs/13.1.0/';
   const ISSUER = 'Prestige Visitas';
   let cfg = null, ready = null, A = null, F = null, auth = null, db = null, persistOk = false, lang = null;
   const emu = {};
@@ -85,7 +85,7 @@
       return W(() => A.signInWithEmailAndPassword(auth, email, pass).catch(err => {
         if (err && err.code === 'auth/multi-factor-auth-required') {
           const res = A.getMultiFactorResolver(auth, err);
-          const h = res.hints.find(x => x.factorId === 'totp');
+          const h = res.hints.find(x => x.factorId === 'totp') || res.hints[0];
           err.mfa = h ? { resolve: code => res.resolveSignIn(A.TotpMultiFactorGenerator.assertionForSignIn(h.uid, code)) } : null;
         }
         throw err;
@@ -121,12 +121,20 @@
     // Empieza la configuración: clave secreta + dirección otpauth:// para el QR; finish(código) la completa
     async start(user) {
       await ready;
+      // Como en CRM-analytics: datos al día y, si el correo ya está verificado pero la sesión aún no lo refleja
+      // (se verificó desde el servidor), se renueva la sesión antes de activar la verificación.
+      await A.reload(user);
+      if (!user.emailVerified) { const e = new Error('unverified'); e.code = 'auth/unverified-email'; throw e; }
+      if (!(await user.getIdTokenResult()).claims.email_verified) await user.getIdToken(true);
       const session = await A.multiFactor(user).getSession();
       const secret = await A.TotpMultiFactorGenerator.generateSecret(session);
       return {
         key: secret.secretKey,
         url: secret.generateQrCodeUrl(user.email || '', ISSUER),
-        finish: code => A.multiFactor(user).enroll(A.TotpMultiFactorGenerator.assertionForEnrollment(secret, code), 'App de códigos'),
+        finish: async code => {
+          await A.multiFactor(user).enroll(A.TotpMultiFactorGenerator.assertionForEnrollment(secret, code), 'App de codigos');
+          await user.getIdToken(true);
+        },
       };
     },
   };
