@@ -41,10 +41,16 @@ Las credenciales de Respacio (`RESPACIO_BASIC`, `RESPACIO_API_KEY`) están en lo
 - **Nombres de los usuarios.** `manageUsers` copia el nombre de cada usuario a `usuarios/{email}` (al crear, al editar y al
   abrir la página «Usuarios»). La app lo muestra en las visitas, el filtro de agentes y los PDF; sin nombre, usa el email.
 
-- **Verificación en dos pasos (app de códigos, TOTP) para supervisores y administradores.** La app usa el SDK modular
-  (`fb.js`). Requiere Identity Platform y TOTP activado en el proyecto. `manageUsers` verifica el correo de supervisores y
-  administradores (Firebase lo exige), muestra quién la tiene y permite quitarla. Obligatoria por pasos: reglas de
-  Firestore (`isSupervisor()` exige `sign_in_second_factor`) y variable `REQUIRE_MFA=1` en el servicio `manageusers`.
+- **Verificación en dos pasos propia (app de códigos, TOTP) para supervisores y administradores.** La comprueba
+  `manageUsers` (`mfa.js`, librería `otplib`), porque en este proyecto Firebase no conserva la de Identity Platform.
+  Acciones: `mfaStatus`, `mfaSetup` (clave + dirección otpauth:// para el QR), `mfaConfirm` y `mfaVerify` (código de 6
+  cifras). La clave se guarda en `mfa/{uid}` (las reglas impiden leerla desde la app). Con el código correcto devuelve un
+  token personalizado con la marca `mfa:'totp'`; la app entra con él (`signInWithCustomToken`) y esa sesión es la que
+  aceptan las reglas. Protecciones: 5 códigos incorrectos bloquean 15 minutos, un código no se puede usar dos veces y la
+  activación caduca a los 15 minutos. Quitarla (móvil perdido): ☰ → Usuarios → «Quitar verificación».
+  Requisito: la cuenta de servicio del servicio `manageusers` necesita el rol «Creador de tokens de cuenta de servicio»
+  (para firmar el token). Obligatoria por pasos: reglas de Firestore (`isSupervisor()` exige `mfa()`) y variable
+  `REQUIRE_MFA=1` en `manageusers`.
 
 ## Pendiente
 

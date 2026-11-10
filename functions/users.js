@@ -10,6 +10,8 @@
  * Every action checks that the caller is an admin. An admin cannot change their own role, disable or delete themselves,
  * so the app never runs out of administrators.
  */
+const { enrolledUids } = require('./mfa');
+
 const ROLES = ['agent', 'supervisor', 'admin'];
 
 class UserError extends Error {
@@ -59,6 +61,7 @@ function authErr(e) {
 
 async function list(auth, db) {
   const out = [];
+  const own = await enrolledUids(db); // our own two-step verification (mfa/{uid})
   let token;
   do {
     const r = await auth.listUsers(1000, token);
@@ -69,7 +72,7 @@ async function list(auth, db) {
       out.push({
         uid: u.uid, email: u.email || '', name: u.displayName || '', disabled: !!u.disabled,
         lastSignIn: u.metadata && u.metadata.lastSignInTime ? Date.parse(u.metadata.lastSignInTime) || null : null,
-        role, mfa: !!(u.multiFactor && u.multiFactor.enrolledFactors && u.multiFactor.enrolledFactors.length),
+        role, mfa: own.has(u.uid) || !!(u.multiFactor && u.multiFactor.enrolledFactors && u.multiFactor.enrolledFactors.length),
       });
     }
     token = r.pageToken;
@@ -144,6 +147,7 @@ async function manage({ auth, db, caller, data, requireMfa }) {
       upd.multiFactor = { enrolledFactors: null };
     }
     if (Object.keys(upd).length) { try { await auth.updateUser(uid, upd); } catch (e) { throw authErr(e); } }
+    if (d.resetMfa) await db.collection('mfa').doc(uid).delete();
     if (d.role !== undefined) await setRole(db, u.email, d.role);
     if (d.name !== undefined && u.email) await setName(db, u.email, cleanName(d.name));
     return { ok: true };

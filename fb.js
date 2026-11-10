@@ -2,6 +2,7 @@
    (firebase.initializeApp / auth() / firestore()), para no cambiar el resto del código. Los módulos se cargan al
    arrancar y cada operación espera a que estén listos. Incluye la verificación en dos pasos con app de códigos
    (TOTP), que la versión «compat» no ofrece: window.fbMfa y el campo `mfa` del error al iniciar sesión.
+   También signInWithCustomToken, para la verificación en dos pasos propia (la comprueba la función manageUsers).
    Si ya existe window.firebase (pruebas con Firebase simulado), no hace nada. */
 (function () {
   if (window.firebase) return;
@@ -91,6 +92,8 @@
         throw err;
       }));
     },
+    // Sesión nueva con la marca mfa:'totp' que devuelve nuestro servidor tras comprobar el código (verificación propia)
+    signInWithCustomToken(t) { return W(() => A.signInWithCustomToken(auth, t).then(c => c.user)); },
     signOut() { return W(() => A.signOut(auth)); },
     sendPasswordResetEmail(email) { return W(() => A.sendPasswordResetEmail(auth, email)); },
     useEmulator(url) { emu.auth = url; },
