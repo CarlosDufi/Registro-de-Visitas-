@@ -4,6 +4,9 @@
  * Roles: agent (no document), supervisor (supervisores/{email}), admin (admins/{email} + supervisores/{email}).
  * Names: Firebase Auth displayName, copied to usuarios/{email} {name} so every signed-in user can show it in viewings
  * and PDFs (kept after deleting a user, so old viewings keep the name).
+ * Two-step verification (TOTP): supervisors and admins get a verified email (Firebase requires it to enrol a second
+ * factor); `mfa` in the list says who has it; `resetMfa` removes it (lost phone). With requireMfa, the caller must
+ * have signed in with the second factor.
  * Every action checks that the caller is an admin. An admin cannot change their own role, disable or delete themselves,
  * so the app never runs out of administrators.
  */
@@ -60,10 +63,13 @@ async function list(auth, db) {
   do {
     const r = await auth.listUsers(1000, token);
     for (const u of r.users) {
+      const role = await roleOf(db, u.email);
+      // Supervisors and admins need a verified email to set up two-step verification
+      if (role !== 'agent' && !u.emailVerified) await auth.updateUser(u.uid, { emailVerified: true });
       out.push({
         uid: u.uid, email: u.email || '', name: u.displayName || '', disabled: !!u.disabled,
         lastSignIn: u.metadata && u.metadata.lastSignInTime ? Date.parse(u.metadata.lastSignInTime) || null : null,
-        role: await roleOf(db, u.email),
+        role, mfa: !!(u.multiFactor && u.multiFactor.enrolledFactors && u.multiFactor.enrolledFactors.length),
       });
     }
     token = r.pageToken;
@@ -83,8 +89,9 @@ async function list(auth, db) {
  * data.action: 'list' | 'create' {email, name, password, role} | 'update' {uid, name?, password?, role?, disabled?} | 'delete' {uid}
  * caller: { uid, email } from the sign-in token.
  */
-async function manage({ auth, db, caller, data }) {
+async function manage({ auth, db, caller, data, requireMfa }) {
   if (!(await isAdmin(db, caller.email))) throw new UserError('permission-denied', 'Only administrators');
+  if (requireMfa && !caller.mfa) throw new UserError('failed-precondition', 'Two-step verification required');
   const d = data || {};
   const action = d.action;
 
@@ -96,7 +103,7 @@ async function manage({ auth, db, caller, data }) {
     if (!okPass(d.password)) throw new UserError('invalid-argument', 'The password must have at least 8 characters');
     if (!ROLES.includes(role)) throw new UserError('invalid-argument', 'Invalid role');
     let u;
-    try { u = await auth.createUser({ email, password: d.password, displayName: name || undefined }); } catch (e) { throw authErr(e); }
+    try { u = await auth.createUser({ email, password: d.password, displayName: name || undefined, emailVerified: role !== 'agent' }); } catch (e) { throw authErr(e); }
     await setRole(db, email, role);
     if (name) await setName(db, email, name);
     return { uid: u.uid };
@@ -130,6 +137,11 @@ async function manage({ auth, db, caller, data }) {
       if (self) throw new UserError('failed-precondition', 'You cannot change your own role');
       if (!ROLES.includes(d.role)) throw new UserError('invalid-argument', 'Invalid role');
       if (!u.email) throw new UserError('failed-precondition', 'The user has no email');
+      if (d.role !== 'agent' && !u.emailVerified) upd.emailVerified = true;
+    }
+    if (d.resetMfa) {
+      if (self) throw new UserError('failed-precondition', 'You cannot remove your own two-step verification');
+      upd.multiFactor = { enrolledFactors: null };
     }
     if (Object.keys(upd).length) { try { await auth.updateUser(uid, upd); } catch (e) { throw authErr(e); } }
     if (d.role !== undefined) await setRole(db, u.email, d.role);

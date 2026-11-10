@@ -41,6 +41,11 @@ Las credenciales de Respacio (`RESPACIO_BASIC`, `RESPACIO_API_KEY`) están en lo
 - **Nombres de los usuarios.** `manageUsers` copia el nombre de cada usuario a `usuarios/{email}` (al crear, al editar y al
   abrir la página «Usuarios»). La app lo muestra en las visitas, el filtro de agentes y los PDF; sin nombre, usa el email.
 
+- **Verificación en dos pasos (app de códigos, TOTP) para supervisores y administradores.** La app usa el SDK modular
+  (`fb.js`). Requiere Identity Platform y TOTP activado en el proyecto. `manageUsers` verifica el correo de supervisores y
+  administradores (Firebase lo exige), muestra quién la tiene y permite quitarla. Obligatoria por pasos: reglas de
+  Firestore (`isSupervisor()` exige `sign_in_second_factor`) y variable `REQUIRE_MFA=1` en el servicio `manageusers`.
+
 ## Pendiente
 
 - **Varias propiedades.** Con varias propiedades Respacio crea un evento por propiedad pero devuelve un solo `event_id`;

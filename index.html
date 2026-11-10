@@ -75,12 +75,16 @@ button.p{background:var(--ac);color:var(--onac);width:100%;font-size:16px;margin
   <label for="em" data-i="email"></label><input id="em" type="email" autocomplete="username" inputmode="email">
   <label for="pw" data-i="pass"></label><input id="pw" type="password" autocomplete="current-password">
   <button class="p" id="login" data-i="login"></button>
+  <div id="mfaBox" hidden><label for="mfaCode" data-i="mfaCodeL"></label><input id="mfaCode" inputmode="numeric" autocomplete="one-time-code"><button class="p" id="mfaGo" data-i="mfaGo"></button></div>
   <div id="amsg" class="mu" style="min-height:18px;margin-top:8px"></div>
   <button type="button" id="forgot" style="margin-top:6px;border:0;padding:6px 0" data-i="forgot"></button>
 </div>
 </section>
 <div id="app" hidden>
 <div class="row userbar"><span class="mu" id="who"></span><span class="menuw"><button id="lo" onclick="logout()" data-i="logout"></button><button id="menuB" hidden onclick="togMenu()" aria-haspopup="true" style="font-size:18px;padding:6px 12px">☰</button><div id="menu" class="menu" hidden><button onclick="openUsers()" data-i="usersT"></button><button onclick="logout()" data-i="logout"></button></div></span></div>
+<div class="card" id="mfaCard" hidden style="border-color:var(--ac)"><b data-i="mfaT"></b><p class="mu" style="margin:4px 0 8px" data-i="mfaWhy"></p>
+<div id="mfaSetup" hidden><p class="mu" style="margin:0 0 8px" data-i="mfaScan"></p><div id="mfaQr" style="background:#fff;display:inline-block;padding:8px;border-radius:8px;line-height:0"></div><p style="margin:8px 0"><a id="mfaLink" data-i="mfaOpen"></a></p><p class="mu" style="margin:8px 0 4px" data-i="mfaKeyL"></p><code id="mfaKey" style="word-break:break-all;font-size:15px"></code><label for="mfaEnr" data-i="mfaCodeL"></label><input id="mfaEnr" inputmode="numeric" autocomplete="one-time-code"><button class="p" id="mfaFin" data-i="mfaFin"></button></div>
+<button type="button" id="mfaStart" style="background:var(--ac);color:var(--onac)" data-i="mfaStart"></button><div id="mfaMsg" class="mu" style="min-height:18px;margin-top:8px"></div></div>
 <div class="card" id="moved" hidden style="border-color:var(--ac)"><b data-i="movedT"></b><p class="mu" style="margin:4px 0 8px" data-i="movedSub"></p><a id="movedA" rel="noopener"><button type="button" style="background:var(--ac);color:var(--onac)" data-i="movedGo"></button></a></div>
 <p class="mu" id="net" hidden style="margin:0 0 8px" data-i="offline"></p>
 <div class="card" id="pend" hidden><b id="pendTxt"></b><p class="mu" style="margin:4px 0 0" data-i="pendSub"></p><p id="pendMem" style="margin:6px 0 0;color:#b3261e;font-weight:600" hidden></p><p id="pendErr" style="margin:6px 0 0;color:#b3261e;font-weight:600" hidden></p><div class="acts"><button onclick="flush(true)" data-i="sendNow"></button></div></div>
@@ -168,7 +172,7 @@ es:{
  months:['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'],allAgents:'Todos los agentes',
  selAll:'Seleccionar todas',cnt:n=>n+' hojas',cntF:(a,b)=>a+' de '+b+' hojas',empty:'Aún no hay visitas.',noMatch:'No hay visitas que coincidan con la búsqueda.',more:n=>'Mostrar más ('+n+' restantes)',
  propL:'Propiedad',ownerL:'Propietario',collabL:'Colaborador',clientL:'Cliente',agentL:'Agente',pendTag:'pendiente de enviar',errTag:c=>'error al enviar ('+c+')',dlPdf:'Descargar PDF',shPdf:'Compartir PDF',searching:'Buscando en el CRM…',noResults:'Sin resultados en el CRM. Puedes escribirlo a mano.',cbError:'No se pudo consultar el CRM. Puedes escribirlo a mano.',cbOffline:'Sin conexión: escríbelo a mano.',linked:'Vinculada al CRM',linkedC:'Cliente vinculado al CRM',
- crmOk:n=>'CRM: evento '+(n?'#'+n:'creado'),crmSyncing:'CRM: enviando…',crmStuck:'CRM: el envío no terminó',crmErr:m=>'CRM: error. '+m,crmSkip:'CRM: sin propiedad vinculada',linkBtn:'Vincular con el CRM',movedT:'La app ha cambiado de dirección',movedSub:'Ábrela en la nueva dirección, inicia sesión y vuelve a instalarla en el móvil. Antes, espera a que no quede ninguna visita pendiente de enviar en esta.',movedGo:'Abrir la nueva dirección',usersT:'Usuarios',back:'← Volver',nuT:'Nuevo usuario',rolesHelp:'Agente: registra sus visitas · Supervisor: además ve las visitas de todos · Administrador: además gestiona usuarios.',nuPass:'Contraseña inicial (mín. 8)',nuGo:'Crear usuario',rAgent:'Agente',rSup:'Supervisor',rAdmin:'Administrador',uEmail:'Email',uName:'Nombre',uRole:'Rol',uLast:'Último acceso',uState:'Estado',uActive:'Activo',uOff:'Desactivado',uYou:'(tú)',uEdit:'Editar',uPass:'Cambiar contraseña',uDisable:'Desactivar',uEnable:'Reactivar',uDel:'Borrar',uNever:'Nunca',uLoading:'Cargando…',uSaved:'Cambios guardados.',uCreated:e=>'Usuario creado: '+e+'. Ya puede entrar con la contraseña inicial.',uNameP:e=>'Nombre de '+e+':',uPassP:e=>'Nueva contraseña para '+e+' (mínimo 8 caracteres):',uShort:'La contraseña debe tener al menos 8 caracteres.',uBadEmail:'Escribe un email válido.',uDisC:e=>'¿Desactivar a '+e+'? No podrá entrar en la app hasta que lo reactives.',uEnC:e=>'¿Reactivar a '+e+'?',uDelC:e=>'¿Borrar el usuario '+e+'? No se puede deshacer. Sus visitas se conservan.',uRoleC:(e,r)=>'¿Cambiar el rol de '+e+' a '+r+'?',uDenied:'Solo los administradores pueden gestionar usuarios.',uExists:'Ya existe un usuario con ese email.',uInvalid:'Datos no válidos: revisa el email y la contraseña.',uSelf:'No puedes cambiar tu propio rol, desactivarte ni borrarte.',uNotFound:'El usuario ya no existe.',uFail:c=>'No se pudo completar ('+c+'). Comprueba la conexión e inténtalo de nuevo.',linkHint:'Busca cada propiedad por referencia o nombre y elígela de la lista.',linkGo:'Vincular y enviar al CRM',linkCancel:'Cancelar',linkNone:'Elige al menos una propiedad de la lista.',linkSending:'Vinculando…',linkFail:c=>'No se pudo vincular ('+c+').',linkHas:'Esta visita ya tiene un evento en el CRM.',crmWait:'CRM: pendiente de enviar',crmRetry:'Reintentar',crmBusy:'CRM: ya se está enviando…',shUnsupported:'Este dispositivo no permite compartir el PDF desde aquí; se ha descargado.',del:'Eliminar',
+ crmOk:n=>'CRM: evento '+(n?'#'+n:'creado'),crmSyncing:'CRM: enviando…',crmStuck:'CRM: el envío no terminó',crmErr:m=>'CRM: error. '+m,crmSkip:'CRM: sin propiedad vinculada',linkBtn:'Vincular con el CRM',mfaCodeL:'Código de 6 cifras de tu app de códigos',mfaGo:'Verificar',mfaAsk:'Escribe el código de 6 cifras que muestra tu app de códigos (Google Authenticator, Microsoft Authenticator…).',mfaSix:'El código tiene 6 cifras.',mfaBad:'Código incorrecto. Escribe el código que aparece ahora en la app (cambia cada 30 segundos).',mfaExpired:'Ha pasado demasiado tiempo. Vuelve a escribir tu contraseña y pulsa Entrar.',mfaT:'Activa la verificación en dos pasos',mfaWhy:'Como supervisor o administrador ves las visitas de todo el equipo. Para proteger tu cuenta, al iniciar sesión se pedirá, además de la contraseña, un código de una app del móvil (Google Authenticator, Microsoft Authenticator…). Instálala antes de empezar.',mfaStart:'Activar ahora',mfaScan:'1. Abre tu app de códigos, pulsa «+» y escanea este código QR:',mfaOpen:'¿Estás en el móvil? Pulsa aquí para añadirlo directamente a la app de códigos',mfaKeyL:'Si no puedes escanearlo, añade esta clave a mano:',mfaFin:'2. Confirmar con el código',mfaDone:'¡Listo! La verificación está activada. Ahora vuelve a iniciar sesión con tu contraseña y el código de la app.',mfaUnverified:'Tu cuenta aún no está preparada para la verificación. Pide a un administrador que abra ☰ → Usuarios (si eres administrador, ábrelo tú) y vuelve a intentarlo.',mfaRecent:'Por seguridad, cierra sesión, vuelve a entrar y pulsa «Activar ahora» de nuevo.',mfaOffFb:'La verificación con app de códigos todavía no está activada en Firebase.',uMfa:'Dos pasos',uMfaOn:'Activada',uMfaNo:'No',uMfaReset:'Quitar verificación',uMfaResetC:e=>'¿Quitar la verificación en dos pasos de '+e+'? Tendrá que configurarla de nuevo al entrar (por ejemplo, si ha cambiado de móvil).',uNeedMfa:'Para gestionar usuarios tienes que haber entrado con la verificación en dos pasos. Actívala, cierra sesión y vuelve a entrar.',movedT:'La app ha cambiado de dirección',movedSub:'Ábrela en la nueva dirección, inicia sesión y vuelve a instalarla en el móvil. Antes, espera a que no quede ninguna visita pendiente de enviar en esta.',movedGo:'Abrir la nueva dirección',usersT:'Usuarios',back:'← Volver',nuT:'Nuevo usuario',rolesHelp:'Agente: registra sus visitas · Supervisor: además ve las visitas de todos · Administrador: además gestiona usuarios.',nuPass:'Contraseña inicial (mín. 8)',nuGo:'Crear usuario',rAgent:'Agente',rSup:'Supervisor',rAdmin:'Administrador',uEmail:'Email',uName:'Nombre',uRole:'Rol',uLast:'Último acceso',uState:'Estado',uActive:'Activo',uOff:'Desactivado',uYou:'(tú)',uEdit:'Editar',uPass:'Cambiar contraseña',uDisable:'Desactivar',uEnable:'Reactivar',uDel:'Borrar',uNever:'Nunca',uLoading:'Cargando…',uSaved:'Cambios guardados.',uCreated:e=>'Usuario creado: '+e+'. Ya puede entrar con la contraseña inicial.',uNameP:e=>'Nombre de '+e+':',uPassP:e=>'Nueva contraseña para '+e+' (mínimo 8 caracteres):',uShort:'La contraseña debe tener al menos 8 caracteres.',uBadEmail:'Escribe un email válido.',uDisC:e=>'¿Desactivar a '+e+'? No podrá entrar en la app hasta que lo reactives.',uEnC:e=>'¿Reactivar a '+e+'?',uDelC:e=>'¿Borrar el usuario '+e+'? No se puede deshacer. Sus visitas se conservan.',uRoleC:(e,r)=>'¿Cambiar el rol de '+e+' a '+r+'?',uDenied:'Solo los administradores pueden gestionar usuarios.',uExists:'Ya existe un usuario con ese email.',uInvalid:'Datos no válidos: revisa el email y la contraseña.',uSelf:'No puedes cambiar tu propio rol, desactivarte ni borrarte.',uNotFound:'El usuario ya no existe.',uFail:c=>'No se pudo completar ('+c+'). Comprueba la conexión e inténtalo de nuevo.',linkHint:'Busca cada propiedad por referencia o nombre y elígela de la lista.',linkGo:'Vincular y enviar al CRM',linkCancel:'Cancelar',linkNone:'Elige al menos una propiedad de la lista.',linkSending:'Vinculando…',linkFail:c=>'No se pudo vincular ('+c+').',linkHas:'Esta visita ya tiene un evento en el CRM.',crmWait:'CRM: pendiente de enviar',crmRetry:'Reintentar',crmBusy:'CRM: ya se está enviando…',shUnsupported:'Este dispositivo no permite compartir el PDF desde aquí; se ha descargado.',del:'Eliminar',
  delConfirm:'¿Eliminar esta visita?',delFail:c=>'No se pudo eliminar ('+c+').',clientUnsigned:'Firma cliente: sin firmar',sigBad:c=>c+': no válida',
  fbTitle:'Valoración y feedback',fbPh:'Comentarios del cliente sobre la propiedad (opcional)',fbSave:'Guardar valoración y feedback',unsaved:'Cambios sin guardar',fbSaved:'Guardado',
  savedLocal:'Guardado en el dispositivo; se enviará con la visita.',savedMem:'No hay espacio en el dispositivo: se enviará con la visita si no cierras la app.',needOnline:'Necesitas conexión para guardar los cambios.',fbDenied:'No tienes permiso para editar esta visita.',fbFail:c=>'No se pudo guardar ('+c+').',
@@ -211,7 +215,7 @@ en:{
  months:['January','February','March','April','May','June','July','August','September','October','November','December'],allAgents:'All agents',
  selAll:'Select all',cnt:n=>n+' sheets',cntF:(a,b)=>a+' of '+b+' sheets',empty:'No viewings yet.',noMatch:'No viewings match your search.',more:n=>'Show more ('+n+' remaining)',
  propL:'Property',ownerL:'Owner',collabL:'Collaborator',clientL:'Client',agentL:'Agent',pendTag:'waiting to be sent',errTag:c=>'sending failed ('+c+')',dlPdf:'Download PDF',shPdf:'Share PDF',searching:'Searching the CRM…',noResults:'No results in the CRM. You can type it manually.',cbError:'Could not reach the CRM. You can type it manually.',cbOffline:'No connection: type it manually.',linked:'Linked to the CRM',linkedC:'Client linked to the CRM',
- crmOk:n=>'CRM: event '+(n?'#'+n:'created'),crmSyncing:'CRM: sending…',crmStuck:'CRM: sending did not finish',crmErr:m=>'CRM error: '+m,crmSkip:'CRM: no linked property',linkBtn:'Link to CRM',movedT:'The app has moved',movedSub:'Open it at the new address, sign in and install it again on your phone. First, wait until no viewing is waiting to be sent here.',movedGo:'Open the new address',usersT:'Users',back:'← Back',nuT:'New user',rolesHelp:'Agent: records their viewings · Supervisor: also sees everyone\'s viewings · Administrator: also manages users.',nuPass:'Initial password (min. 8)',nuGo:'Create user',rAgent:'Agent',rSup:'Supervisor',rAdmin:'Administrator',uEmail:'Email',uName:'Name',uRole:'Role',uLast:'Last sign-in',uState:'Status',uActive:'Active',uOff:'Disabled',uYou:'(you)',uEdit:'Edit',uPass:'Change password',uDisable:'Disable',uEnable:'Enable',uDel:'Delete',uNever:'Never',uLoading:'Loading…',uSaved:'Changes saved.',uCreated:e=>'User created: '+e+'. They can sign in with the initial password.',uNameP:e=>'Name for '+e+':',uPassP:e=>'New password for '+e+' (at least 8 characters):',uShort:'The password must have at least 8 characters.',uBadEmail:'Enter a valid email.',uDisC:e=>'Disable '+e+'? They will not be able to sign in until you enable them again.',uEnC:e=>'Enable '+e+'?',uDelC:e=>'Delete the user '+e+'? This cannot be undone. Their viewings are kept.',uRoleC:(e,r)=>'Change the role of '+e+' to '+r+'?',uDenied:'Only administrators can manage users.',uExists:'A user with that email already exists.',uInvalid:'Invalid data: check the email and the password.',uSelf:'You cannot change your own role, disable or delete yourself.',uNotFound:'The user no longer exists.',uFail:c=>'Could not complete it ('+c+'). Check the connection and try again.',linkHint:'Search each property by reference or name and pick it from the list.',linkGo:'Link and send to CRM',linkCancel:'Cancel',linkNone:'Pick at least one property from the list.',linkSending:'Linking…',linkFail:c=>'Could not link ('+c+').',linkHas:'This visit already has a CRM event.',crmWait:'CRM: waiting to be sent',crmRetry:'Retry',crmBusy:'CRM: already sending…',shUnsupported:'This device cannot share the PDF from here; it has been downloaded instead.',del:'Delete',
+ crmOk:n=>'CRM: event '+(n?'#'+n:'created'),crmSyncing:'CRM: sending…',crmStuck:'CRM: sending did not finish',crmErr:m=>'CRM error: '+m,crmSkip:'CRM: no linked property',linkBtn:'Link to CRM',mfaCodeL:'6-digit code from your authenticator app',mfaGo:'Verify',mfaAsk:'Enter the 6-digit code shown in your authenticator app (Google Authenticator, Microsoft Authenticator…).',mfaSix:'The code has 6 digits.',mfaBad:'Wrong code. Enter the code the app shows now (it changes every 30 seconds).',mfaExpired:'Too much time has passed. Enter your password again and tap Sign in.',mfaT:'Turn on two-step verification',mfaWhy:'As a supervisor or administrator you can see the whole team\'s viewings. To protect your account, signing in will ask for your password and a code from an authenticator app on your phone (Google Authenticator, Microsoft Authenticator…). Install it before you start.',mfaStart:'Turn on now',mfaScan:'1. Open your authenticator app, tap "+" and scan this QR code:',mfaOpen:'On your phone? Tap here to add it straight to your authenticator app',mfaKeyL:'If you cannot scan it, add this key manually:',mfaFin:'2. Confirm with the code',mfaDone:'Done! Two-step verification is on. Now sign in again with your password and the code from the app.',mfaUnverified:'Your account is not ready for verification yet. Ask an administrator to open ☰ → Users (if you are an administrator, open it yourself) and try again.',mfaRecent:'For security, sign out, sign in again and tap "Turn on now" again.',mfaOffFb:'Authenticator-app verification is not enabled in Firebase yet.',uMfa:'Two-step',uMfaOn:'On',uMfaNo:'Off',uMfaReset:'Remove two-step',uMfaResetC:e=>'Remove two-step verification for '+e+'? They will set it up again when they sign in (for example, after changing phones).',uNeedMfa:'To manage users you must have signed in with two-step verification. Turn it on, sign out and sign in again.',movedT:'The app has moved',movedSub:'Open it at the new address, sign in and install it again on your phone. First, wait until no viewing is waiting to be sent here.',movedGo:'Open the new address',usersT:'Users',back:'← Back',nuT:'New user',rolesHelp:'Agent: records their viewings · Supervisor: also sees everyone\'s viewings · Administrator: also manages users.',nuPass:'Initial password (min. 8)',nuGo:'Create user',rAgent:'Agent',rSup:'Supervisor',rAdmin:'Administrator',uEmail:'Email',uName:'Name',uRole:'Role',uLast:'Last sign-in',uState:'Status',uActive:'Active',uOff:'Disabled',uYou:'(you)',uEdit:'Edit',uPass:'Change password',uDisable:'Disable',uEnable:'Enable',uDel:'Delete',uNever:'Never',uLoading:'Loading…',uSaved:'Changes saved.',uCreated:e=>'User created: '+e+'. They can sign in with the initial password.',uNameP:e=>'Name for '+e+':',uPassP:e=>'New password for '+e+' (at least 8 characters):',uShort:'The password must have at least 8 characters.',uBadEmail:'Enter a valid email.',uDisC:e=>'Disable '+e+'? They will not be able to sign in until you enable them again.',uEnC:e=>'Enable '+e+'?',uDelC:e=>'Delete the user '+e+'? This cannot be undone. Their viewings are kept.',uRoleC:(e,r)=>'Change the role of '+e+' to '+r+'?',uDenied:'Only administrators can manage users.',uExists:'A user with that email already exists.',uInvalid:'Invalid data: check the email and the password.',uSelf:'You cannot change your own role, disable or delete yourself.',uNotFound:'The user no longer exists.',uFail:c=>'Could not complete it ('+c+'). Check the connection and try again.',linkHint:'Search each property by reference or name and pick it from the list.',linkGo:'Link and send to CRM',linkCancel:'Cancel',linkNone:'Pick at least one property from the list.',linkSending:'Linking…',linkFail:c=>'Could not link ('+c+').',linkHas:'This visit already has a CRM event.',crmWait:'CRM: waiting to be sent',crmRetry:'Retry',crmBusy:'CRM: already sending…',shUnsupported:'This device cannot share the PDF from here; it has been downloaded instead.',del:'Delete',
  delConfirm:'Delete this viewing?',delFail:c=>'Could not delete ('+c+').',clientUnsigned:'Client signature: not signed',sigBad:c=>c+': invalid',
  fbTitle:'Rating and feedback',fbPh:'Client comments about the property (optional)',fbSave:'Save rating and feedback',unsaved:'Unsaved changes',fbSaved:'Saved',
  savedLocal:'Saved on the device; it will be sent with the viewing.',savedMem:'No space left on the device: it will be sent with the viewing if you do not close the app.',needOnline:'You need a connection to save changes.',fbDenied:'You do not have permission to edit this viewing.',fbFail:c=>'Could not save ('+c+').',
@@ -348,7 +352,7 @@ async function fnCall(name,data,signal){
   const tk=await me.getIdToken();
   const res=await fetch(FN_URL[name]||FN_BASE+name,{method:'POST',signal,headers:{'Content-Type':'application/json','Authorization':'Bearer '+tk},body:JSON.stringify({data})});
   let j=null;try{j=await res.json()}catch(e){}
-  if(!res.ok||!j||j.error)throw new Error((j&&j.error&&j.error.status)||('http'+res.status));
+  if(!res.ok||!j||j.error){const err=new Error((j&&j.error&&j.error.status)||('http'+res.status));err.detail=String((j&&j.error&&j.error.message)||'');throw err}
   return j.result;
 }
 /* Generic ajax dropdown: input + loader below + list of suggestions */
@@ -1000,7 +1004,7 @@ function adminUI(){$('menuB').hidden=!isAdm;$('lo').hidden=isAdm;$('menu').hidde
 function togMenu(){$('menu').hidden=!$('menu').hidden}
 document.addEventListener('click',e=>{if(!e.target.closest('#menu,#menuB'))$('menu').hidden=true});
 function openUsers(){$('menu').hidden=true;tab(3);window.scrollTo(0,0);loadUsers()}
-const uErr=e=>{const c=String((e&&(e.code||e.message))||'error');return({PERMISSION_DENIED:t('uDenied'),ALREADY_EXISTS:t('uExists'),INVALID_ARGUMENT:t('uInvalid'),FAILED_PRECONDITION:t('uSelf'),NOT_FOUND:t('uNotFound')})[c]||t('uFail',c)};
+const uErr=e=>{const c=String((e&&(e.code||e.message))||'error');if(/two-step/i.test((e&&e.detail)||''))return t('uNeedMfa');return({PERMISSION_DENIED:t('uDenied'),ALREADY_EXISTS:t('uExists'),INVALID_ARGUMENT:t('uInvalid'),FAILED_PRECONDITION:t('uSelf'),NOT_FOUND:t('uNotFound')})[c]||t('uFail',c)};
 const uCall=d=>wt(fnCall('manageUsers',d),30000);
 const roleTxt=r=>t({agent:'rAgent',supervisor:'rSup',admin:'rAdmin'}[r]||'rAgent');
 async function loadUsers(){
@@ -1017,7 +1021,8 @@ function renderUsers(){
     <td data-l="${esc(t('uRole'))}"><select data-ua="role" data-uid="${id}" ${self?'disabled':''}>${['agent','supervisor','admin'].map(r=>`<option value="${r}" ${u.role===r?'selected':''}>${esc(roleTxt(r))}</option>`).join('')}</select></td>
     <td data-l="${esc(t('uLast'))}">${esc(dt(u.lastSignIn))}</td>
     <td data-l="${esc(t('uState'))}"${u.disabled?' style="color:#b3261e"':''}>${esc(t(u.disabled?'uOff':'uActive'))}</td>
-    <td><div class="ua"><button type="button" data-ua="pass" data-uid="${id}">${esc(t('uPass'))}</button>${self?'':`<button type="button" data-ua="dis" data-uid="${id}">${esc(t(u.disabled?'uEnable':'uDisable'))}</button><button type="button" class="del" data-ua="del" data-uid="${id}">${esc(t('uDel'))}</button>`}</div></td></tr>`}).join('')+'</tbody></table>';
+    <td data-l="${esc(t('uMfa'))}">${esc(t(u.mfa?'uMfaOn':'uMfaNo'))}</td>
+    <td><div class="ua"><button type="button" data-ua="pass" data-uid="${id}">${esc(t('uPass'))}</button>${u.mfa&&!self?`<button type="button" data-ua="mfa" data-uid="${id}">${esc(t('uMfaReset'))}</button>`:''}${self?'':`<button type="button" data-ua="dis" data-uid="${id}">${esc(t(u.disabled?'uEnable':'uDisable'))}</button><button type="button" class="del" data-ua="del" data-uid="${id}">${esc(t('uDel'))}</button>`}</div></td></tr>`}).join('')+'</tbody></table>';
 }
 async function uDo(d){
   $('umsg').textContent=t('uLoading');
@@ -1031,6 +1036,7 @@ $('ulist').addEventListener('click',e=>{
   else if(a==='pass'){const p=prompt(t('uPassP',u.email),'');if(p===null)return;if(p.length<8)return void($('umsg').textContent=t('uShort'));uDo({action:'update',uid:u.uid,password:p})}
   else if(a==='dis'){if(confirm(t(u.disabled?'uEnC':'uDisC',u.email)))uDo({action:'update',uid:u.uid,disabled:!u.disabled})}
   else if(a==='del'){if(confirm(t('uDelC',u.email)))uDo({action:'delete',uid:u.uid})}
+  else if(a==='mfa'){if(confirm(t('uMfaResetC',u.email)))uDo({action:'update',uid:u.uid,resetMfa:true})}
 });
 $('ulist').addEventListener('change',e=>{
   const s=e.target.closest('select[data-ua=role]');if(!s)return;const u=uList.find(x=>x.uid===s.dataset.uid);if(!u)return;
@@ -1060,9 +1066,76 @@ $('login').onclick=async()=>{
   const em=$('em').value.trim(),pw=$('pw').value;
   if(!em||!pw){$('amsg').textContent=t('aEmpty');return}
   $('login').disabled=true;$('amsg').textContent='';
-  try{await auth.signInWithEmailAndPassword(em,pw);$('pw').value=''}catch(e){$('amsg').textContent=authErr(e)}
+  try{await auth.signInWithEmailAndPassword(em,pw);$('pw').value=''}
+  catch(e){
+    // Verificación en dos pasos: falta el código de la app
+    if(e&&e.code==='auth/multi-factor-auth-required'&&e.mfa){mfaPending=e.mfa;$('mfaBox').hidden=false;$('mfaCode').value='';$('amsg').textContent=t('mfaAsk');$('mfaCode').focus()}
+    else $('amsg').textContent=authErr(e);
+  }
   $('login').disabled=false;
 };
+/* ===== Verificación en dos pasos (app de códigos), para supervisores y administradores ===== */
+let mfaPending=null,mfaEnroll=null;
+const sixDigits=v=>String(v||'').replace(/\D/g,'');
+function mfaErr(e){
+  const c=(e&&e.code)||'';
+  if(c==='auth/invalid-verification-code')return t('mfaBad');
+  if(c==='auth/missing-multi-factor-session'||c==='auth/code-expired'||c==='auth/multi-factor-info-not-found')return t('mfaExpired');
+  if(c==='auth/unverified-email')return t('mfaUnverified');
+  if(c==='auth/requires-recent-login')return t('mfaRecent');
+  if(c==='auth/operation-not-allowed'||c==='auth/admin-restricted-operation')return t('mfaOffFb');
+  if(c==='auth/network-request-failed')return t('aNet');
+  return t('uFail',c||'error');
+}
+$('mfaGo').onclick=async()=>{
+  const c=sixDigits($('mfaCode').value);
+  if(c.length!==6){$('amsg').textContent=t('mfaSix');return}
+  if(!mfaPending){$('mfaBox').hidden=true;$('amsg').textContent=t('mfaExpired');return}
+  $('mfaGo').disabled=true;
+  try{await mfaPending.resolve(c);mfaPending=null;$('mfaBox').hidden=true;$('pw').value='';$('mfaCode').value='';$('amsg').textContent=''}
+  catch(e){const m=mfaErr(e);$('amsg').textContent=m;if(m===t('mfaExpired')){mfaPending=null;$('mfaBox').hidden=true}}
+  $('mfaGo').disabled=false;
+};
+$('mfaCode').addEventListener('keydown',e=>{if(e.key==='Enter')$('mfaGo').click()});
+/* Supervisores y administradores sin la verificación: tarjeta para activarla (QR + clave + código) */
+async function mfaUI(){
+  const show=!!(me&&window.fbMfa&&(isSup||isAdm));
+  let need=false;
+  if(show){try{need=!(await window.fbMfa.enrolled(me))}catch(e){need=false}}
+  $('mfaCard').hidden=!need;
+  if(!need){$('mfaSetup').hidden=true;$('mfaStart').hidden=false;$('mfaMsg').textContent=''}
+}
+function loadQr(){
+  if(window.qrcode)return Promise.resolve();
+  return new Promise((ok,ko)=>{const sc=document.createElement('script');sc.src='https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js';sc.onload=ok;sc.onerror=ko;document.head.appendChild(sc)});
+}
+$('mfaStart').onclick=async()=>{
+  if(!me)return;
+  $('mfaStart').disabled=true;$('mfaMsg').textContent=t('uLoading');
+  try{
+    mfaEnroll=await window.fbMfa.start(me);
+    $('mfaKey').textContent=mfaEnroll.key.replace(/(.{4})/g,'$1 ').trim();
+    $('mfaLink').href=mfaEnroll.url;
+    $('mfaQr').innerHTML='';
+    try{await loadQr();const q=window.qrcode(0,'M');q.addData(mfaEnroll.url);q.make();$('mfaQr').innerHTML=q.createSvgTag(5,4)}catch(e){$('mfaQr').hidden=true}
+    $('mfaSetup').hidden=false;$('mfaStart').hidden=true;$('mfaEnr').value='';$('mfaMsg').textContent='';
+  }catch(e){$('mfaMsg').textContent=mfaErr(e)}
+  finally{$('mfaStart').disabled=false}
+};
+$('mfaFin').onclick=async()=>{
+  const c=sixDigits($('mfaEnr').value);
+  if(c.length!==6){$('mfaMsg').textContent=t('mfaSix');return}
+  if(!mfaEnroll)return;
+  $('mfaFin').disabled=true;
+  try{
+    await mfaEnroll.finish(c);mfaEnroll=null;
+    // Se vuelve a entrar para estrenar la sesión con el segundo paso (y comprobar que el código funciona)
+    $('mfaSetup').hidden=true;$('mfaMsg').textContent=t('mfaDone');
+    setTimeout(()=>{auth.signOut().catch(()=>{})},3000);
+  }catch(e){$('mfaMsg').textContent=mfaErr(e)}
+  finally{$('mfaFin').disabled=false}
+};
+$('mfaEnr').addEventListener('keydown',e=>{if(e.key==='Enter')$('mfaFin').click()});
 $('pw').addEventListener('keydown',e=>{if(e.key==='Enter')$('login').click()});
 $('em').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();if($('pw').value)$('login').click();else $('pw').focus()}});
 /* El mensaje de éxito no dice si el correo tiene cuenta (protección de enumeración); sí se avisa si no se pudo enviar */
@@ -1113,7 +1186,7 @@ async function start(){
   try{adm=(await wt(navigator.onLine?ad.get():ad.get({source:'cache'}),8000)).exists}
   catch(e){try{adm=(await ad.get({source:'cache'})).exists}catch(e2){}}
   if(me!==u)return;
-  isAdm=adm;adminUI();
+  isAdm=adm;adminUI();mfaUI();
   isSup=sup;whoTxt();
   const col=db.collection('visits'),qy=isSup?col:col.where('agentUid','==',u.uid);
   unsub=qy.onSnapshot(s=>{srv=s.docs.map(d=>({...d.data(),id:d.id}));merge();render()},e=>{$('msg2').textContent=t('loadFail',e.code||'error')});
@@ -1123,7 +1196,7 @@ auth.onAuthStateChanged(u=>{
   if(unsub){unsub();unsub=null}
   if(draftUnsub){draftUnsub();draftUnsub=null}
   if(namesUnsub){namesUnsub();namesUnsub=null}
-  srv=[];visits=[];sel.clear();me=u;isSup=false;isAdm=false;adminUI();errRetried=false;shown=PAGE;setDraft(null);
+  srv=[];visits=[];sel.clear();me=u;isSup=false;isAdm=false;adminUI();$('mfaCard').hidden=true;$('mfaSetup').hidden=true;$('mfaStart').hidden=false;$('mfaMsg').textContent='';if(u){mfaPending=null;$('mfaBox').hidden=true}errRetried=false;shown=PAGE;setDraft(null);
   if(!u){$('q').value='';$('per').value='all';$('ag').value='all';show('auth');return}
   whoTxt();
   show('app');tab(1);checkLegacy();net();merge();render();start();
