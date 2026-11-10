@@ -1098,8 +1098,11 @@ $('mfaGo').onclick=async()=>{
 };
 $('mfaCode').addEventListener('keydown',e=>{if(e.key==='Enter')$('mfaGo').click()});
 /* Supervisores y administradores sin la verificación: tarjeta para activarla (QR + clave + código) */
+// Tarjeta de activación oculta: en este proyecto (con Identity Platform) Firebase no conserva la verificación con
+// app de códigos. Poner a true cuando funcione. El paso del código al iniciar sesión sigue activo.
+const MFA_CARD=false;
 async function mfaUI(){
-  const show=!!(me&&window.fbMfa&&(isSup||isAdm));
+  const show=!!(MFA_CARD&&me&&window.fbMfa&&(isSup||isAdm));
   let st='ok';
   if(show){try{st=await window.fbMfa.status(me)}catch(e){st='ok'}}
   $('mfaCard').hidden=st==='ok';
