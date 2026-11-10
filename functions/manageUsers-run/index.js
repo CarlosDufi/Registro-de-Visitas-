@@ -30,8 +30,9 @@ functions.http('manageUsers', async (req, res) => {
   try { token = await admin.auth().verifyIdToken(m ? m[1] : '', true); } catch (e) { return fail(res, 'unauthenticated', 'Sign in required'); }
 
   try {
-    const caller = { uid: token.uid, email: String(token.email || '').toLowerCase() };
-    const result = await users.manage({ auth: admin.auth(), db, caller, data: (req.body && req.body.data) || {} });
+    // mfa: signed in with the second factor. REQUIRE_MFA=1 (Cloud Run variable) makes it compulsory for admins.
+    const caller = { uid: token.uid, email: String(token.email || '').toLowerCase(), mfa: !!(token.firebase && token.firebase.sign_in_second_factor) };
+    const result = await users.manage({ auth: admin.auth(), db, caller, data: (req.body && req.body.data) || {}, requireMfa: process.env.REQUIRE_MFA === '1' });
     res.status(200).json({ result });
   } catch (e) {
     if (e instanceof users.UserError) return fail(res, e.code, e.message);
