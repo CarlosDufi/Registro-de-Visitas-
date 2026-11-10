@@ -1,10 +1,10 @@
-const CACHE='visitas-v2';
-const CORE=['./','index.html','manifest.json','icon-192.png','icon-512.png','fonts/NotoSans-Regular.ttf','fonts/NotoSans-Bold.ttf'];
-const CDN=['https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js','https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js','https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js','https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js'];
+const CACHE='visitas-v3';
+const CORE=['./','index.html','fb.js','manifest.json','icon-192.png','icon-512.png','fonts/NotoSans-Regular.ttf','fonts/NotoSans-Bold.ttf'];
+const CDN=['https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js','https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js','https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js','https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js'];
 self.addEventListener('install',e=>{
   e.waitUntil((async()=>{
     const c=await caches.open(CACHE);
-    await Promise.allSettled([...CORE.map(u=>c.add(u)),...CDN.map(async u=>{const r=await fetch(u,{mode:'no-cors'});await c.put(u,r)})]);
+    await Promise.allSettled([...CORE.map(u=>c.add(u)),...CDN.map(async u=>{const r=await fetch(u,{mode:'cors'});await c.put(u,r)})]);
     self.skipWaiting();
   })());
 });
