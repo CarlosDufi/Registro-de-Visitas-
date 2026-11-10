@@ -1188,8 +1188,8 @@ async function start(){
   try{adm=(await wt(navigator.onLine?ad.get():ad.get({source:'cache'}),8000)).exists}
   catch(e){try{adm=(await ad.get({source:'cache'})).exists}catch(e2){}}
   if(me!==u)return;
-  isAdm=adm;adminUI();mfaUI();
-  isSup=sup;whoTxt();
+  isAdm=adm;adminUI();
+  isSup=sup;mfaUI();whoTxt();
   const col=db.collection('visits'),qy=isSup?col:col.where('agentUid','==',u.uid);
   unsub=qy.onSnapshot(s=>{srv=s.docs.map(d=>({...d.data(),id:d.id}));merge();render()},e=>{$('msg2').textContent=t('loadFail',e.code||'error')});
   draftsListen();namesListen();render();flush();

@@ -1,6 +1,6 @@
-const CACHE='visitas-v3';
+const CACHE='visitas-v4';
 const CORE=['./','index.html','fb.js','manifest.json','icon-192.png','icon-512.png','fonts/NotoSans-Regular.ttf','fonts/NotoSans-Bold.ttf'];
-const CDN=['https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js','https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js','https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js','https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js'];
+const CDN=['https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js','https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js','https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js','https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js'];
 self.addEventListener('install',e=>{
   e.waitUntil((async()=>{
     const c=await caches.open(CACHE);
