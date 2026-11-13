@@ -182,8 +182,9 @@ async function syncVisit({ db, visitId, uid, email, link, callFn, now, cfg }) {
       v = { ...v, ...extra };
     }
     const ids = linkedProps(v);
-    if (!ids.length) {
-      tx.update(ref, { ...extra, crm: { status: 'skipped', message: 'No CRM property selected', updatedAt: clock() } });
+    // A CRM property or a CRM client is enough (e.g. a collaborator's property, not in the CRM, with a CRM client)
+    if (!ids.length && !asId(v.clientId)) {
+      tx.update(ref, { ...extra, crm: { status: 'skipped', message: 'No CRM property or client selected', updatedAt: clock() } });
       return { skipped: true };
     }
     if (crm.status === 'syncing' && clock() - (crm.lockAt || 0) < 90000) return { busy: true };
@@ -197,7 +198,8 @@ async function syncVisit({ db, visitId, uid, email, link, callFn, now, cfg }) {
   const { v, crm, ids } = gate;
   const notes = buildNotes(v);
   const kind = crm.eventId ? 'update' : 'event';
-  const params = kind === 'update' ? { event_id: crm.eventId, notes } : { user_email: email, property_arr: ids, notes };
+  const params = kind === 'update' ? { event_id: crm.eventId, notes } : { user_email: email, notes };
+  if (kind === 'event' && ids.length) params.property_arr = ids;
   const cid = asId(v.clientId);
   if (cid && kind === 'event') params.contact_id = cid;
 
