@@ -7,14 +7,37 @@
  *   mfaSetup              → new secret (kept as "pending" for 15 minutes) + otpauth:// address for the QR
  *   mfaConfirm { code }   → checks it against the pending secret and makes it the active one
  *   mfaVerify  { code }   → checks it against the active secret
- * Confirm and verify return a Firebase custom token with the claim mfa:'totp'. The app signs in with it, so only that
- * session carries the claim the Firestore rules and REQUIRE_MFA ask for (a password-only session does not).
+ *   (both take remember:true → also a "remembered device" token for this browser, valid until the 12 hours run out)
+ *   mfaDevice  { device } → a remembered device signs in again without the code (same 12 hours as the code it came from)
+ *   mfaForget  { device } → forgets that device ("Sign out and forget this device")
+ * They return a Firebase custom token with the claims mfa:'totp' and mfaAt (when the code was checked, in seconds).
+ * The app signs in with it; the Firestore rules and manageUsers accept that session for 12 hours after mfaAt, then
+ * the app asks for the code again. A password-only session never carries the claim.
  * Protections: 5 wrong codes → 15 minutes locked; each code is accepted only once (no replay); ±30 s clock margin.
+ * Remembered devices: only a SHA-256 of the device token is stored; removing the verification (resetMfa) deletes them.
  */
+const crypto = require('crypto');
 const { authenticator } = require('otplib');
 
 const ISSUER = 'Prestige Visitas';
 const STEP_S = 30, MAX_FAILS = 5, LOCK_MS = 15 * 60 * 1000, PENDING_MS = 15 * 60 * 1000;
+const TTL_S = 12 * 3600, MAX_DEVICES = 10;
+
+// A session verified with the code in the last 12 hours (ID token claims)
+const fresh = (token, nowMs) => !!token && token.mfa === 'totp' &&
+  Number(token.mfaAt) * 1000 > (nowMs || Date.now()) - TTL_S * 1000;
+const hashOf = (device) => crypto.createHash('sha256').update(String(device)).digest('hex');
+const okDevice = (v) => typeof v === 'string' && /^[A-Za-z0-9_-]{20,100}$/.test(v);
+// Remembered devices still within their 12 hours (at most MAX_DEVICES, newest first)
+function liveDevices(devices, t) {
+  const out = {};
+  Object.entries(devices || {})
+    .filter(([, e]) => e && e.exp > t)
+    .sort((a, b) => b[1].exp - a[1].exp)
+    .slice(0, MAX_DEVICES)
+    .forEach(([h, e]) => { out[h] = { at: e.at, exp: e.exp }; });
+  return out;
+}
 
 class MfaError extends Error {
   constructor(code, message) { super(message); this.code = code; }
@@ -62,15 +85,43 @@ async function handle({ auth, db, caller, data, roleOf, now }) {
         tx.set(ref, fails >= MAX_FAILS ? { fails: 0, lockUntil: t + LOCK_MS } : { fails }, { merge: true });
         return { bad: true, locked: fails >= MAX_FAILS };
       }
-      tx.set(ref, action === 'mfaConfirm'
-        ? { secret, pending: null, pendingAt: null, enabledAt: t, lastStep: step, fails: 0, lockUntil: 0 }
-        : { lastStep: step, fails: 0, lockUntil: 0 }, { merge: true });
-      return { ok: true };
+      const at = Math.floor(t / 1000);
+      const devices = liveDevices(d.devices, t);
+      let device = null;
+      if (data && data.remember === true) {
+        device = crypto.randomBytes(32).toString('base64url');
+        devices[hashOf(device)] = { at, exp: (at + TTL_S) * 1000 };
+      }
+      const fields = action === 'mfaConfirm'
+        ? { secret, pending: null, pendingAt: null, enabledAt: t, lastStep: step, fails: 0, lockUntil: 0, devices: liveDevices(devices, t) }
+        : { lastStep: step, fails: 0, lockUntil: 0, devices: liveDevices(devices, t) };
+      tx.set(ref, fields, { mergeFields: Object.keys(fields) });
+      return { ok: true, at, device };
     });
     if (r.locked) throw new MfaError('resource-exhausted', 'Too many attempts, try again in 15 minutes');
     if (r.missing) throw new MfaError('failed-precondition', action === 'mfaConfirm' ? 'Setup expired' : 'Two-step verification is not on');
     if (r.bad) throw new MfaError('invalid-argument', 'Wrong code');
-    return { token: await auth.createCustomToken(caller.uid, { mfa: 'totp' }) };
+    const out = { token: await auth.createCustomToken(caller.uid, { mfa: 'totp', mfaAt: r.at }), expires: (r.at + TTL_S) * 1000 };
+    if (r.device) out.device = r.device;
+    return out;
+  }
+
+  if (action === 'mfaDevice' || action === 'mfaForget') {
+    if (!okDevice(data && data.device)) throw new MfaError('invalid-argument', 'Invalid device');
+    const h = hashOf(data.device);
+    const r = await db.runTransaction(async (tx) => {
+      const s = await tx.get(ref);
+      if (!s.exists || !s.data().secret) return { missing: true };
+      const t = clock();
+      const devices = liveDevices(s.data().devices, t);
+      const e = devices[h];
+      if (action === 'mfaForget') delete devices[h];
+      tx.set(ref, { devices }, { mergeFields: ['devices'] });
+      return { e };
+    });
+    if (action === 'mfaForget') return { ok: true };
+    if (r.missing || !r.e) throw new MfaError('failed-precondition', 'Device not remembered');
+    return { token: await auth.createCustomToken(caller.uid, { mfa: 'totp', mfaAt: r.e.at }), expires: r.e.exp };
   }
 
   throw new MfaError('invalid-argument', 'Unknown action');
@@ -83,4 +134,4 @@ async function enrolledUids(db) {
   return out;
 }
 
-module.exports = { MfaError, handle, enrolledUids, totpAt, STEP_S };
+module.exports = { MfaError, handle, enrolledUids, totpAt, fresh, STEP_S, TTL_S };

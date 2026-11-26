@@ -31,14 +31,14 @@ functions.http('manageUsers', async (req, res) => {
   try { token = await admin.auth().verifyIdToken(m ? m[1] : '', true); } catch (e) { return fail(res, 'unauthenticated', 'Sign in required'); }
 
   try {
-    // mfa: signed in with the second factor. REQUIRE_MFA=1 (Cloud Run variable) makes it compulsory for admins.
-    // mfa: session opened with the second factor (ours: claim mfa 'totp'; Firebase's: sign_in_second_factor)
-    const caller = { uid: token.uid, email: String(token.email || '').toLowerCase(), mfa: token.mfa === 'totp' || !!(token.firebase && token.firebase.sign_in_second_factor) };
+    // mfa: session verified with the code in the last 12 hours (see mfa.js). Managing users requires it, unless the
+    // Cloud Run variable REQUIRE_MFA is set to 0 (emergency switch).
+    const caller = { uid: token.uid, email: String(token.email || '').toLowerCase(), mfa: mfa.fresh(token) };
     const data = (req.body && req.body.data) || {};
     // mfa* actions: our own two-step verification, for supervisors and admins (see mfa.js)
     const result = /^mfa/.test(String(data.action || ''))
       ? await mfa.handle({ auth: admin.auth(), db, caller, data, roleOf: users.roleOf })
-      : await users.manage({ auth: admin.auth(), db, caller, data, requireMfa: process.env.REQUIRE_MFA === '1' });
+      : await users.manage({ auth: admin.auth(), db, caller, data, requireMfa: process.env.REQUIRE_MFA !== '0' });
     res.status(200).json({ result });
   } catch (e) {
     if (e instanceof users.UserError || e instanceof mfa.MfaError) return fail(res, e.code, e.message);
