@@ -41,16 +41,21 @@ Las credenciales de Respacio (`RESPACIO_BASIC`, `RESPACIO_API_KEY`) están en lo
 - **Nombres de los usuarios.** `manageUsers` copia el nombre de cada usuario a `usuarios/{email}` (al crear, al editar y al
   abrir la página «Usuarios»). La app lo muestra en las visitas, el filtro de agentes y los PDF; sin nombre, usa el email.
 
-- **Verificación en dos pasos propia (app de códigos, TOTP) para supervisores y administradores.** La comprueba
-  `manageUsers` (`mfa.js`, librería `otplib`), porque en este proyecto Firebase no conserva la de Identity Platform.
-  Acciones: `mfaStatus`, `mfaSetup` (clave + dirección otpauth:// para el QR), `mfaConfirm` y `mfaVerify` (código de 6
-  cifras). La clave se guarda en `mfa/{uid}` (las reglas impiden leerla desde la app). Con el código correcto devuelve un
-  token personalizado con la marca `mfa:'totp'`; la app entra con él (`signInWithCustomToken`) y esa sesión es la que
-  aceptan las reglas. Protecciones: 5 códigos incorrectos bloquean 15 minutos, un código no se puede usar dos veces y la
-  activación caduca a los 15 minutos. Quitarla (móvil perdido): ☰ → Usuarios → «Quitar verificación».
-  Requisito: la cuenta de servicio del servicio `manageusers` necesita el rol «Creador de tokens de cuenta de servicio»
-  (para firmar el token). Obligatoria por pasos: reglas de Firestore (`isSupervisor()` exige `mfa()`) y variable
-  `REQUIRE_MFA=1` en `manageusers`.
+- **Verificación en dos pasos propia (app de códigos, TOTP), obligatoria para supervisores y administradores.** La
+  comprueba `manageUsers` (`mfa.js`, librería `otplib`), porque en este proyecto Firebase no conserva la de Identity
+  Platform. Acciones: `mfaStatus`, `mfaSetup` (clave + dirección otpauth:// para el QR), `mfaConfirm` y `mfaVerify`
+  (código de 6 cifras; con `remember:true` devuelven además un comprobante de «dispositivo recordado»), `mfaDevice`
+  (entrar con ese comprobante) y `mfaForget` (olvidarlo). La clave y las huellas (SHA-256) de los dispositivos
+  recordados se guardan en `mfa/{uid}` (las reglas impiden leerlo desde la app). Con el código correcto devuelve un
+  token personalizado con las marcas `mfa:'totp'` y `mfaAt` (hora del código); la app entra con él.
+  - **12 horas:** las reglas (`isSupervisor()` → `mfa()`) y `manageUsers` solo aceptan sesiones con `mfaAt` de las
+    últimas 12 horas; después la app vuelve a pedir el código. Sin la marca, un supervisor solo ve sus visitas.
+  - **Recordar este dispositivo:** opcional; al volver a entrar con la contraseña en ese navegador no pide el código
+    hasta que se cumplen las 12 horas del último. «Salir y olvidar este dispositivo» lo anula.
+  - **Protecciones:** 5 códigos incorrectos bloquean 15 minutos, un código no se puede usar dos veces y la activación
+    caduca a los 15 minutos. «Quitar verificación» (☰ → Usuarios) borra `mfa/{uid}`, también los dispositivos recordados.
+  - **Requisitos:** la cuenta de servicio de `manageusers` necesita el rol «Creador de tokens de cuenta de servicio».
+    Gestionar usuarios exige la verificación; `REQUIRE_MFA=0` en `manageusers` la desactiva solo en caso de emergencia.
 
 ## Pendiente
 
